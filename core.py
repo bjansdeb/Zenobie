@@ -5,15 +5,15 @@ import hashlib
 
 def main():
     user = str(input("Who are you : "))
-    repository = str(input("What's the repository of the vrac archives : "))
+    repository = str(input(f"Hello {user}. What's the repository of the vrac archives : "))
     print("you have indicated :", repository)
     if os.path.isdir(repository):
-        sail_to_bay(repository)
+        sail_to_bay(repository, user)
         state_of_art(repository, user)
         dezip()
         remove_empty()        
     else :
-        print("Path not correct, retry")
+        print("Path not correct, retry please")
         pass
 
 
@@ -21,15 +21,28 @@ def main():
 """Création et transfert vers la baie d'embarquement"""
 def sail_to_bay(rep, us):
     directory = "unload_bay"
-    parent_dir = "/Zenobie"
+    parent_dir = os.path.dirname(__file__)
     path = os.path.join(parent_dir, directory)
-    os.mkdir(path)
+    if os.path.isdir(path):
+         print("Unload bay already exists")       
+    else : 
+        os.mkdir(path)
+
     original_rep = "original_files"
     copies_rep = "copied_files"
     originals = os.path.join(path, original_rep)
-    os.mkdir(originals)
+    if os.path.isdir(originals):
+        print("Originals repository already exists")
+    else :
+        os.mkdir(originals)
+
     copies = os.path.join(path, copies_rep)
-    os.mkdir(copies)
+
+    if os.path.isdir(copies):
+        print("Copies repository already exists")
+    else :
+        os.mkdir(copies)
+
     #faire en sorte de copier les fichiers vers original and copied files
 
     #calculer le hash de base pour les trois dossiers 
@@ -52,9 +65,9 @@ def state_of_art(rep, us):
     start_depth = 1
     count = 0
     state_report = open("state_report.txt", "w+t")
-    full_size = os.path.getsize(str(rep)) #taille du contenu de la totalité du répertoire en bytes
+    full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
     date = datetime.datetime.now() #horodatage du rapport
-    stats = os.stat()
+    stats = os.stat(rep)
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = max(start_depth, current_depth) #calcule la différence entre le niveau 1 et le compte des profondeurs
@@ -79,8 +92,8 @@ def remove_empty():
     ...
 
 def hash_calculator(item):
-    sha_256 = hashlib.sha256(item)
-    md5 = hashlib.md5(item)
+    sha_256 = hashlib.sha256(b"item")
+    md5 = hashlib.md5(b"item")
     print("sha_256", sha_256, "md5", md5)
     return sha_256, md5
 
