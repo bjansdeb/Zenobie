@@ -1,14 +1,18 @@
 import datetime, hashlib, os, subprocess, shutil, sys
 import csv
+from zenoclasses import User, Action
 
 def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
-    user = str(input("Who are you : "))
-    repository = str(input(f"Hello {user}. What's the repository of the digital bulk : "))
+    name = str(input("What's your name : "))
+    role = str(input(f"Hello {name}. What's your role at Carhif: "))
+    user = User (name, role, "AVG-CARHIF")
+    repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
     print("you have indicated :", repository)
+
     if os.path.isdir(repository):
-        sail_to_bay(repository, user)
-        state_of_art(repository, user)
+        sail_to_bay(repository, user.name)
+        state_of_art(repository, user.name)
         while True:
             try:
                 answeer = str(input("Do we remove empty repositories ? (type yes or no)")).lstrip().lower()
@@ -20,7 +24,8 @@ def main():
             except:
                 raise ValueError("Please, answeer yes or no")
         droid_check()
-        remove_empty()        
+        remove_empty()
+        print("Process finished, bye {user.name}")        
     else :
         print("Path not correct, retry please")
         pass
