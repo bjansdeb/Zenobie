@@ -1,7 +1,9 @@
-import os
-import sys
 import datetime
 import hashlib
+import os
+import subprocess
+import shutil
+import sys
 
 def main():
     user = str(input("Who are you : "))
@@ -11,6 +13,7 @@ def main():
         sail_to_bay(repository, user)
         state_of_art(repository, user)
         dezip()
+        droid_check()
         remove_empty()        
     else :
         print("Path not correct, retry please")
@@ -18,18 +21,19 @@ def main():
 
 
 
-"""Création et transfert vers la baie d'embarquement"""
+"""Création et transfert vers la baie d'embarquement avec calcul hash"""
 def sail_to_bay(rep, us):
     directory = "unload_bay"
     parent_dir = os.path.dirname(__file__)
     path = os.path.join(parent_dir, directory)
+    """Création de la baie si inexistante"""
     if os.path.isdir(path):
          print("Unload bay already exists")       
     else : 
         os.mkdir(path)
 
-    original_rep = "original_files"
-    copies_rep = "copied_files"
+    original_rep = "original_room"
+    copies_rep = "sorting_room"
     originals = os.path.join(path, original_rep)
     if os.path.isdir(originals):
         print("Originals repository already exists")
@@ -54,7 +58,7 @@ def sail_to_bay(rep, us):
     hash_calculator(original_items)
     hash_calculator(copied_items)
 
-    date = datetime.datetime.now() #horodatage du rapport
+    date = datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p') #horodatage du rapport
     transfert_report = open("transfert_report.txt", "w+t")
     transfert_report.write(f"Transfert done by {us} at {date}")
     transfert_report.write(f"\nHash of the original files : {hash}")
@@ -63,10 +67,9 @@ def sail_to_bay(rep, us):
 """Etat des lieux"""
 def state_of_art(rep, us):
     start_depth = 1
-    count = 0
     state_report = open("state_report.txt", "w+t")
     full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
-    date = datetime.datetime.now() #horodatage du rapport
+    date = datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p') #horodatage du rapport
     stats = os.stat(rep)
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
@@ -87,12 +90,14 @@ def state_of_art(rep, us):
 def dezip():
     ...
 
+def droid_check():
+    ...
 """Suppression de dossiers vides"""
 def remove_empty():
     ...
 
-def hash_calculator(item):
-    sha_256 = hashlib.sha256(b"item")
+def hash_calculator(item): 
+    sha_256 = hashlib.sha256(b"item") #à retravailler car calculte le hash sur "item" et non la variable
     md5 = hashlib.md5(b"item")
     print("sha_256", sha_256, "md5", md5)
     return sha_256, md5
