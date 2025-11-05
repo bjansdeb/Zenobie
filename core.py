@@ -1,18 +1,24 @@
-import datetime
-import hashlib
-import os
-import subprocess
-import shutil
-import sys
+import datetime, hashlib, os, subprocess, shutil, sys
+import csv
 
 def main():
+    print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
     user = str(input("Who are you : "))
-    repository = str(input(f"Hello {user}. What's the repository of the vrac archives : "))
+    repository = str(input(f"Hello {user}. What's the repository of the digital bulk : "))
     print("you have indicated :", repository)
     if os.path.isdir(repository):
         sail_to_bay(repository, user)
         state_of_art(repository, user)
-        dezip()
+        while True:
+            try:
+                answeer = str(input("Do we remove empty repositories ? (type yes or no)")).lstrip().lower()
+                if answeer == "yes":
+                    dezip()
+                elif answeer == "no":
+                    print("ok, we continue without dezipping repositories")
+                    break            
+            except:
+                raise ValueError("Please, answeer yes or no")
         droid_check()
         remove_empty()        
     else :
@@ -40,6 +46,16 @@ def sail_to_bay(rep, us):
     originals = os.path.join(path, original_rep)
     if os.path.isdir(originals):
         print("Originals repository already exists")
+        csvfile = open('hash_report.csv', 'w', newline=',', encoding='utf-8') #à corriger
+        hash_report = csv.writer(csvfile)
+        for root, dir, files in os.walk(rep): 
+            for file in files :
+                f =os.path.join(root, file)
+                md5 = hash_calculator(f)
+                hash_report.writerow(f)
+                hash_report.writerow(md5)
+        robot_copy(rep, originals, parent_dir)
+        # hash_calculator(originals)
     else :
         os.mkdir(originals)
 
@@ -47,8 +63,7 @@ def sail_to_bay(rep, us):
 
     if os.path.isdir(copies):
         print("Copies repository already exists")
-        robotcopy = subprocess.run(["robocopy", rep, copies, "/e", "/copyall", f"/log+:{parent_dir}/transfert_report.txt"], check=False)
-        print(robotcopy)
+        robot_copy(rep, copies, parent_dir)
     else :
         os.mkdir(copies)
     #faire en sorte de copier les fichiers vers original and copied files
@@ -56,12 +71,12 @@ def sail_to_bay(rep, us):
 
     #calculer le hash de base pour les trois dossiers 
     """Calcul du checksum original avant transfert"""
-    hash_calculator(rep)
-    original_items =""
-    copied_items= ""
-    """Vérification du checksum après transfert"""
-    hash_calculator(original_items)
-    hash_calculator(copied_items)
+    # hash_calculator(rep)
+    # original_items =""
+    # copied_items= ""
+    # """Vérification du checksum après transfert"""
+    # hash_calculator(original_items)
+    # hash_calculator(copied_items)
 
     date = horodatage() #horodatage du rapport
     transfert_report.write(f"Transfert done by {us} at {date}")
@@ -92,19 +107,29 @@ def state_of_art(rep, us):
 
 """Décompression des fichiers"""
 def dezip():
-    ...
+    print("dezip done")
 
 def droid_check():
+    print("time to droid check")
     ...
 """Suppression de dossiers vides"""
 def remove_empty():
     ...
 
-def hash_calculator(item): 
-    sha_256 = hashlib.sha256(b"item") #à retravailler car calculte le hash sur "item" et non la variable
-    md5 = hashlib.md5(b"item")
-    # print("sha_256", sha_256, "md5", md5)
-    return sha_256, md5
+def robot_copy(source, destination, log_repository):
+    subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
+    robotcopy = subprocess.run(["robocopy", source, destination, "/e", "/copyall", f"/log+:{log_repository}/transfert_report.txt"], check=False)
+    #robotcopy contient de nombreuses métadonnées qu'on pourrait utiliser pour le rapport ultérieurement
+
+def hash_calculator(source):
+
+    sha_256 = hashlib.sha256() 
+    md5 = hashlib.md5()
+    print(source)
+    with open(source, 'rb') as file:
+        while chunk := file.read(8192):
+            md5.update(chunk)
+    return md5.hexdigest()
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
