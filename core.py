@@ -20,14 +20,14 @@ def main():
 
                
 
-    originals_repository, copies_repository = create_bay(user)      
+    originals_repository, copies_repository, unload_bay = create_bay(user)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
-        copies_repository = sail_to_bay(repository, originals_repository, copies_repository, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
+        copies_repository = sail_to_bay(repository, originals_repository, copies_repository, unload_bay, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
         state_of_art(repository, user.name)
         while True:
             try:
-                answeer = str(input("Do we remove empty repositories ? (type yes or no)")).lstrip().lower()
+                answeer = str(input("May I remove empty repositories(yes or no)?")).lstrip().lower()
                 if answeer == "yes":
                     dezip()
                 elif answeer == "no":
@@ -43,85 +43,68 @@ def main():
         pass
 
 """-----------------------------------------------"""
-"""Functions"""
+"""**** Functions   ****"""
 """-----------------------------------------------"""
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
-def create_bay(rep, user):
-    directory = "unload_bay"
+def create_bay(user):
     parent_dir = os.path.dirname(__file__)
-    path = os.path.join(parent_dir, directory)
-    """Création du rapport"""
-    transfert_report = open("transfert_report.txt", "w+t")
+    unload_bay = os.path.join(parent_dir, "unload_bay")
 
     """Création de la baie si inexistante"""
-    if os.path.isdir(path):
+    if os.path.isdir(unload_bay):
          print("Unload bay already exists")       
     else : 
-        os.mkdir(path)
+        os.mkdir(unload_bay)
 
     original_rep = "original_room"
     copies_rep = "sorting_room"
-    originals = os.path.join(path, original_rep)
+    originals = os.path.join(unload_bay, original_rep)
     if os.path.isdir(originals):
         print("Originals repository already exists")
     else :
         os.mkdir(originals)
 
-    copies = os.path.join(path, copies_rep)
+    copies = os.path.join(unload_bay, copies_rep)
 
     if os.path.isdir(copies):
         print("Copies repository already exists")
     else :
         os.mkdir(copies)
+        
+    return originals, copies, unload_bay
+
+def sail_to_bay(rep, originals, copies, unload_bay, user):
+    csvfile = open("hash_report", 'w', newline='', encoding='utf-8') #à corriger
+    hash_report = csv.writer(csvfile)    
+    for root, dir, files in os.walk(rep): 
+        for file in files :
+            f =os.path.join(root, file)
+            md5 = hash_calculator(f)            
+            hash_report.writerow([f])
+            hash_report.writerow([md5])        
+    robot_copy(rep, originals, unload_bay)
+    robot_copy(rep, copies, unload_bay)
     
-    return originals, copies
-
-def sail_to_bay(rep, user):
-    directory = "unload_bay"
-    parent_dir = os.path.dirname(__file__)
-    path = os.path.join(parent_dir, directory)
-    """Création du rapport"""
-    transfert_report = open("transfert_report.txt", "w+t")
-
-    """Création de la baie si inexistante"""
-    if os.path.isdir(path):
-         print("Unload bay already exists")       
-    else : 
-        os.mkdir(path)
-
-    original_rep = "original_room"
-    copies_rep = "sorting_room"
-    originals = os.path.join(path, original_rep)
-    if os.path.isdir(originals):
-        print("Originals repository already exists")
-        csvfile = open('hash_report.csv', 'w', newline='', encoding='utf-8') #à corriger
-        hash_report = csv.writer(csvfile)
-        for root, dir, files in os.walk(rep): 
-            for file in files :
-                f =os.path.join(root, file)
-                md5 = hash_calculator(f)
-                hash_report.writerow([f])
-                hash_report.writerow([md5])
-        robot_copy(rep, originals, parent_dir)
-
-        hash_report.writerow([user.name])
-        # hash_calculator(originals)
-    else :
-        os.mkdir(originals)
-
-    copies = os.path.join(path, copies_rep)
-
-    if os.path.isdir(copies):
-        print("Copies repository already exists")
-        robot_copy(rep, copies, parent_dir)
-    else :
-        os.mkdir(copies)
-    
-    return copies
     #faire en sorte de copier les fichiers vers original and copied files
- 
+
+    # original_rep = "original_room"
+    # copies_rep = "sorting_room"
+    # originals = os.path.join(path, original_rep)
+    # if os.path.isdir(originals):
+    #     print("Originals repository already exists")
+    #     csvfile = open('hash_report.csv', 'w', newline='', encoding='utf-8') #à corriger
+    #     hash_report = csv.writer(csvfile)
+    #     for root, dir, files in os.walk(rep): 
+    #         for file in files :
+    #             f =os.path.join(root, file)
+    #             md5 = hash_calculator(f)
+    #             hash_report.writerow([f])
+    #             hash_report.writerow([md5])
+    #     robot_copy(rep, originals, parent_dir)
+
+    #     hash_report.writerow([user.name])
 
     #calculer le hash de base pour les trois dossiers 
     """Calcul du checksum original avant transfert"""
