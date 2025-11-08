@@ -2,6 +2,8 @@ import datetime, hashlib, os, subprocess, shutil, sys
 import csv
 from zenoclasses import Agent, Action, Report
 
+#os.utime() report
+
 def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
     name = str(input("What's your name : "))
@@ -22,7 +24,7 @@ def main():
 
     originals_repository, copies_repository, unload_bay = create_bay(user)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
-        copies_repository = sail_to_bay(repository, originals_repository, copies_repository, unload_bay, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
+        sail_to_bay(repository, originals_repository, copies_repository, unload_bay, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
         state_of_art(repository, user.name)
         while True:
@@ -30,13 +32,15 @@ def main():
                 answeer = str(input("May I remove empty repositories(yes or no)?")).lstrip().lower()
                 if answeer == "yes":
                     dezip()
+                    break
                 elif answeer == "no":
                     print("ok, we continue without dezipping repositories")
                     break            
             except:
                 raise ValueError("Please, answeer yes or no")
+        remove_empty(copies_repository)
         droid_check()
-        remove_empty()
+
         print(f"Process finished, bye {user.name}")        
     else :
         print("Path not correct, retry please")
@@ -150,8 +154,21 @@ def droid_check():
     print("time to droid check")
     ...
 """Suppression de dossiers vides"""
-def remove_empty():
-    ...
+def remove_empty(copies_rep):
+    for root, dir, files in os.walk(copies_rep):
+        bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
+        if bytes == 0:
+            print(root)
+            os.rmdir(root)
+        # for file in files:
+        #     total = sum(os.path.getsize(file))
+        #     print
+        # for file in dir:
+        #     print(file)
+        # repertory = os.path.join(root, dir)
+        # print(repertory)
+            #os.rmdir(os.path.join(root, file))
+    print("Empty repertory removed")
 
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
