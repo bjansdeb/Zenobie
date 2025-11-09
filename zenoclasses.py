@@ -7,8 +7,10 @@ class Agent:
         self.institution = institution
         self.note = note #Premis agentNote, facultatif, pour note additionnelle/complémentaire
 
-"""Basé sur Event dans PREMIS
+"""
+Action basé sur Event dans PREMIS
 The Event entity aggregates metadata about actions
+Event est une action
 """    
 class Action:
     def __init__(self, id, description, user, time):
@@ -16,6 +18,23 @@ class Action:
         self.description = description
         self.user = user
         self.time = time
+
+"""
+Object basé sur Object dans Premis
+
+"""
+
+class Object:
+    def __init__(self, id, formatName, formatVersion, formatRegistryName,
+                 messageDigestAlgorithm, messageDigest, size ):
+        self.id = id
+        self.formatName = formatName #premis obligatoire
+        self.formatVersion = formatVersion #premis version du formatmention en nom #facultatif
+        self.formatRegistryName = formatRegistryName #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
+        self.messageDigestAlgorithm = messageDigestAlgorithm #Premis, algo (md5..., etc) utilisé pour calculer le hash #obligatoire
+        self.messageDigest = messageDigest  #Premis, output du calcul algo #obligatoire
+        self.size = size #premis
+
 class Report:
     def __init__(self, title, creation_time, author):
         self.title = title

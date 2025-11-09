@@ -1,5 +1,11 @@
-import datetime, hashlib, os, subprocess, shutil, sys
-import csv
+import csv 
+import datetime 
+import hashlib
+import os 
+import subprocess
+import shutil
+import sys
+
 from zenoclasses import Agent, Action, Report
 
 #os.utime() report
@@ -24,7 +30,8 @@ def main():
 
     originals_repository, copies_repository, unload_bay = create_bay(user)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
-        sail_to_bay(repository, originals_repository, copies_repository, unload_bay, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
+        sail_to_bay(repository, originals_repository, 
+                    copies_repository, unload_bay, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
         state_of_art(repository, user.name)
         while True:
@@ -158,21 +165,15 @@ def remove_empty(copies_rep):
     for root, dir, files in os.walk(copies_rep):
         bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
         if bytes == 0:
-            print(root)
+            print(root) #ajouter un tableau ou un rapport reprenant tous les dossiers vides et demande de confirmation avant de supprimer
             os.rmdir(root)
-        # for file in files:
-        #     total = sum(os.path.getsize(file))
-        #     print
-        # for file in dir:
-        #     print(file)
-        # repertory = os.path.join(root, dir)
-        # print(repertory)
-            #os.rmdir(os.path.join(root, file))
     print("Empty repertory removed")
 
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
-    robotcopy = subprocess.run(["robocopy", source, destination, "/e", "/copyall", f"/log+:{log_repository}/transfert_report.txt"], check=False)
+    robotcopy = subprocess.run(["robocopy", source, destination, 
+                                "/e", "/copyall", f"/log+:{log_repository}/transfert_report.txt"], 
+                                check=False)
     #robotcopy contient de nombreuses métadonnées qu'on pourrait utiliser pour le rapport ultérieurement
 
 def hash_calculator(source):
