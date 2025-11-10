@@ -6,12 +6,13 @@ import subprocess
 import shutil
 import sys
 
-from zenoclasses import Agent, Action, Report
+from zenoclasses import Agent, Event, Report
 
 #os.utime() report
 
 def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
+    events = [] #liste d'objets events
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
     user = Agent ("0001",name, role, "individual", "AVG-CARHIF", "")
@@ -76,13 +77,14 @@ def create_bay(user):
         print("Originals repository already exists")
     else :
         os.mkdir(originals)
+        print("Originals repository created")
 
     copies = os.path.join(unload_bay, copies_rep)
-
     if os.path.isdir(copies):
         print("Copies repository already exists")
     else :
         os.mkdir(copies)
+        print("Copies repository created")
         
     return originals, copies, unload_bay
 
@@ -94,7 +96,10 @@ def sail_to_bay(rep, originals, copies, unload_bay, user):
             f =os.path.join(root, file)
             md5 = hash_calculator(f)            
             hash_report.writerow([f])
-            hash_report.writerow([md5])        
+            hash_report.writerow([md5])
+    event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
+    event.set_agent(user.name) 
+    event.display_metadata()
     robot_copy(rep, originals, unload_bay)
     robot_copy(rep, copies, unload_bay)
     

@@ -8,16 +8,23 @@ class Agent:
         self.note = note #Premis agentNote, facultatif, pour note additionnelle/complémentaire
 
 """
-Action basé sur Event dans PREMIS
+Basé sur Event dans PREMIS
 The Event entity aggregates metadata about actions
 Event est une action
 """    
-class Action:
-    def __init__(self, id, description, user, time):
-        self.id = id
-        self.description = description
-        self.user = user
-        self.time = time
+class Event:
+    def __init__(self,eventIdentifierType, eventIdentifierValue, eventType, eventDateTime):
+        self.eventIdentifierType = eventIdentifierType #premis, obligatoire (local, UUID, )
+        self.eventIdentifierValue = eventIdentifierValue #premis, obligatoire
+        self.eventType = eventType #premis, obligatoire ; voir vc https://id.loc.gov/vocabulary/preservation/eventType.html
+        self.eventDateTime = eventDateTime #premis, obligatoire
+    
+    def set_agent(self, agent):
+        self.agent = agent
+    
+    def display_metadata(self):
+        print(self.eventIdentifierType, self.eventIdentifierValue, self.eventType, self.eventDateTime, self.agent)
+
 
 """
 Object basé sur Object dans Premis
@@ -25,11 +32,11 @@ Object basé sur Object dans Premis
 """
 
 class Object:
-    def __init__(self, id, formatName, formatVersion, formatRegistryName,
-                 messageDigestAlgorithm, messageDigest, size ):
-        self.id = id
+    def __init__(self, objectIdentifierValue, formatName, formatVersion, formatRegistryName,
+                 messageDigestAlgorithm, messageDigest, size):
+        self.objectIdentifierValue = objectIdentifierValue #premis obligatoire, 
         self.formatName = formatName #premis obligatoire
-        self.formatVersion = formatVersion #premis version du formatmention en nom #facultatif
+        self.formatVersion = formatVersion #premis version du format mention en nom #facultatif
         self.formatRegistryName = formatRegistryName #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
         self.messageDigestAlgorithm = messageDigestAlgorithm #Premis, algo (md5..., etc) utilisé pour calculer le hash #obligatoire
         self.messageDigest = messageDigest  #Premis, output du calcul algo #obligatoire
@@ -54,3 +61,8 @@ class Report:
 
     def record_it(self, action):
         ...
+
+class Right:
+    def __init__(self,rightsStatementIdentifierType, rightsStatementIdentifierValue):
+        self.rightsStatementIdentifierType = rightsStatementIdentifierType #premis
+        self.rightsStatementIdentifierValue = rightsStatementIdentifierValue  #premis
