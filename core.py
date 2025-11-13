@@ -5,6 +5,7 @@ import os
 import subprocess
 import shutil
 import sys
+import zipfile
 
 from zenoclasses import Agent, Event, Report
 
@@ -12,7 +13,6 @@ from zenoclasses import Agent, Event, Report
 
 def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
-    events = [] #liste d'objets events
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
     user = Agent ("0001",name, role, "individual", "AVG-CARHIF", "")
@@ -39,13 +39,14 @@ def main():
             try:
                 answeer = str(input("May I remove empty repositories(yes or no)?")).lstrip().lower()
                 if answeer == "yes":
-                    dezip()
+                    dezip(copies_repository)
                     break
                 elif answeer == "no":
                     print("ok, we continue without dezipping repositories")
                     break            
-            except:
-                raise ValueError("Please, answeer yes or no")
+            except ValueError:
+                print("Please, answeer yes or no")
+                pass
         remove_empty(copies_repository)
         droid_check()
 
@@ -91,12 +92,12 @@ def create_bay(user):
 def sail_to_bay(rep, originals, copies, unload_bay, user):
     csvfile = open("hash_report", 'w', newline='', encoding='utf-8') #à corriger
     hash_report = csv.writer(csvfile)    
-    for root, dir, files in os.walk(rep): 
+    for root, dirs, files in os.walk(rep): 
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)            
-            hash_report.writerow([f])
-            hash_report.writerow([md5])
+            hash_report.writerow([f]) # titre répertoire
+            hash_report.writerow([md5]) # hash
     event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
     event.set_agent(user.name) 
     event.display_metadata()
@@ -112,7 +113,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, user):
     #     print("Originals repository already exists")
     #     csvfile = open('hash_report.csv', 'w', newline='', encoding='utf-8') #à corriger
     #     hash_report = csv.writer(csvfile)
-    #     for root, dir, files in os.walk(rep): 
+    #     for root, dirs, files in os.walk(rep): 
     #         for file in files :
     #             f =os.path.join(root, file)
     #             md5 = hash_calculator(f)
@@ -159,15 +160,21 @@ def state_of_art(rep, us):
     state_report.write(f"\nReport done with Zenobie at {date} by {us}")
 
 """Décompression des fichiers"""
-def dezip():
-    print("dezip done")
+def dezip(copies_rep):
+    for root, dirs, files in os.walk(copies_rep):
+        for file in files :
+            f = os.path.join(root, file)
+            if zipfile.is_zipfile(f):
+                with zipfile.ZipFile(f, "r") as zip:
+                    zip.extractall(root)
+                    print("dezip done")
 
 def droid_check():
     print("time to droid check")
     ...
 """Suppression de dossiers vides"""
 def remove_empty(copies_rep):
-    for root, dir, files in os.walk(copies_rep):
+    for root, dirs, files in os.walk(copies_rep):
         bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
         if bytes == 0:
             print(root) #ajouter un tableau ou un rapport reprenant tous les dossiers vides et demande de confirmation avant de supprimer
@@ -176,9 +183,9 @@ def remove_empty(copies_rep):
 
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
-    robotcopy = subprocess.run(["robocopy", source, destination, 
-                                "/e", "/copyall", f"/log+:{log_repository}/transfert_report.txt"], 
-                                check=False)
+    subprocess.run(["robocopy", source, destination, 
+                    "/e", "/copyall", f"/log+:{log_repository}/transfert_report.txt"], 
+                    check=False)
     #robotcopy contient de nombreuses métadonnées qu'on pourrait utiliser pour le rapport ultérieurement
 
 def hash_calculator(source):

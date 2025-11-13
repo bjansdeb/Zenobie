@@ -23,8 +23,11 @@ class Event:
         self.agent = agent
     
     def display_metadata(self):
-        print(self.eventIdentifierType, self.eventIdentifierValue, self.eventType, self.eventDateTime, self.agent)
+        print(self.eventIdentifierType, self.eventIdentifierValue, 
+              self.eventType, self.eventDateTime, self.agent)
 
+    def write_report(self):
+        ...
 
 """
 Object basé sur Object dans Premis
@@ -66,3 +69,19 @@ class Right:
     def __init__(self,rightsStatementIdentifierType, rightsStatementIdentifierValue):
         self.rightsStatementIdentifierType = rightsStatementIdentifierType #premis
         self.rightsStatementIdentifierValue = rightsStatementIdentifierValue  #premis
+class Mets:
+    def __init__(self, hdr_id, hdr_create_date, 
+                 hdr_last_mod, hdr_id_producter, hdr_id_production):
+        self.hdr_id = hdr_id
+        self.hdr_create_date = hdr_create_date
+        self.hdr_last_mod = hdr_last_mod
+        self.hdr_id_producter = hdr_id_producter
+        self.hdr_id_production = hdr_id_production
+    def set_agent(self, agent):
+        self.agents= list[agent]
+    def set_event(self, event):
+        self.event= list[event]
+    def set_right(self, right):
+        self.right = list[right]
+    def set_object(self, object):
+        self.object = list[object]
