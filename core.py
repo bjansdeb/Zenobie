@@ -7,9 +7,11 @@ import shutil
 import sys
 import zipfile
 
-from zenoclasses import Agent, Event, Report
+from zenoclasses import Agent, Event, Object, Report, Mets
 
 #os.utime() report
+mets = Mets(1, "2020","2021", "Benjamin", 15)
+
 
 def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
@@ -17,7 +19,6 @@ def main():
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
     user = Agent ("0001",name, role, "individual", "AVG-CARHIF", "")
     repository, originals_repository, copies_repository = "", "", ""
-    # report = Report() 
     while True:
         try:
             repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
@@ -90,52 +91,19 @@ def create_bay(user):
     return originals, copies, unload_bay
 
 def sail_to_bay(rep, originals, copies, unload_bay, user):
-    csvfile = open("hash_report", 'w', newline='', encoding='utf-8') #à corriger
-    hash_report = csv.writer(csvfile)    
     for root, dirs, files in os.walk(rep): 
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)            
-            hash_report.writerow([f]) # titre répertoire
-            hash_report.writerow([md5]) # hash
+            object = Object(objectIdentifierValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
+            mets.set_object(object)
     event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
     event.set_agent(user.name) 
     event.display_metadata()
+    mets.write_report(type="hash")
     robot_copy(rep, originals, unload_bay)
     robot_copy(rep, copies, unload_bay)
     
-    #faire en sorte de copier les fichiers vers original and copied files
-
-    # original_rep = "original_room"
-    # copies_rep = "sorting_room"
-    # originals = os.path.join(path, original_rep)
-    # if os.path.isdir(originals):
-    #     print("Originals repository already exists")
-    #     csvfile = open('hash_report.csv', 'w', newline='', encoding='utf-8') #à corriger
-    #     hash_report = csv.writer(csvfile)
-    #     for root, dirs, files in os.walk(rep): 
-    #         for file in files :
-    #             f =os.path.join(root, file)
-    #             md5 = hash_calculator(f)
-    #             hash_report.writerow([f])
-    #             hash_report.writerow([md5])
-    #     robot_copy(rep, originals, parent_dir)
-
-    #     hash_report.writerow([user.name])
-
-    #calculer le hash de base pour les trois dossiers 
-    """Calcul du checksum original avant transfert"""
-    # hash_calculator(rep)
-    # original_items =""
-    # copied_items= ""
-    # """Vérification du checksum après transfert"""
-    # hash_calculator(original_items)
-    # hash_calculator(copied_items)
-
-    # date = horodatage() #horodatage du rapport
-    # transfert_report.write(f"Transfert done by {us} at {date}")
-    # transfert_report.write(f"\nHash of the original files : {hash}")
-    # transfert_report.close()
 
 """Etat des lieux"""
 def state_of_art(rep, us):

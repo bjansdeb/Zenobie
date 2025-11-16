@@ -1,3 +1,5 @@
+import csv
+
 class Agent:
     def __init__(self, id, name, role, agent_type, institution, note):
         self.id = id #Premis
@@ -26,8 +28,6 @@ class Event:
         print(self.eventIdentifierType, self.eventIdentifierValue, 
               self.eventType, self.eventDateTime, self.agent)
 
-    def write_report(self):
-        ...
 
 """
 Object basé sur Object dans Premis
@@ -51,17 +51,7 @@ class Report:
         self.time = creation_time
         self.author = author
         self.actions = {}
-
-    # def create_hash_csv(self, title, report_rep):
-    #     csvfile = open(title, 'w', newline='', encoding='utf-8') #à corriger
-    #     hash_report = csv.writer(csvfile)
-    #     for root, dir, files in os.walk(source): 
-    #         for file in files :
-    #             f =os.path.join(root, file)
-    #             md5 = hash_calculator(f)
-    #             hash_report.writerow([f])
-    #             hash_report.writerow([md5])            
-
+       
     def record_it(self, action):
         ...
 
@@ -69,9 +59,11 @@ class Right:
     def __init__(self,rightsStatementIdentifierType, rightsStatementIdentifierValue):
         self.rightsStatementIdentifierType = rightsStatementIdentifierType #premis
         self.rightsStatementIdentifierValue = rightsStatementIdentifierValue  #premis
+
 class Mets:
     def __init__(self, hdr_id, hdr_create_date, 
                  hdr_last_mod, hdr_id_producter, hdr_id_production):
+        
         self.hdr_id = hdr_id
         self.hdr_create_date = hdr_create_date
         self.hdr_last_mod = hdr_last_mod
@@ -85,3 +77,10 @@ class Mets:
         self.right = list[right]
     def set_object(self, object):
         self.object = list[object]
+    def write_report(self, file_name, object, type):
+        if type =="hash":
+            with open(file_name, 'w', newline='', encoding='utf-8') as f:
+                fieldnames = ['object_name', 'hash']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerow({'object_name': {object.name}, 'hash': {object.hash}})
