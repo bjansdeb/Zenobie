@@ -1,4 +1,6 @@
 import csv
+from dataclasses import dataclass, field
+
 
 class Agent:
     def __init__(self, id, name, role, agent_type, institution, note):
@@ -33,17 +35,23 @@ class Event:
 Object basé sur Object dans Premis
 
 """
-
+@dataclass
 class Object:
-    def __init__(self, objectIdentifierValue, formatName, formatVersion, formatRegistryName,
-                 messageDigestAlgorithm, messageDigest, size):
-        self.objectIdentifierValue = objectIdentifierValue #premis obligatoire, 
-        self.formatName = formatName #premis obligatoire
-        self.formatVersion = formatVersion #premis version du format mention en nom #facultatif
-        self.formatRegistryName = formatRegistryName #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
-        self.messageDigestAlgorithm = messageDigestAlgorithm #Premis, algo (md5..., etc) utilisé pour calculer le hash #obligatoire
-        self.messageDigest = messageDigest  #Premis, output du calcul algo #obligatoire
-        self.size = size #premis
+        objectIdentifierType : str | None = "local"
+        # objectIdentifierValue : int = field(init=False) #premis obligatoire partout 
+        formatName : str | None = None #premis obligatoire partout
+        formatVersion : str | None = None #premis version du format mention en nom #facultatif
+        formatRegistryName : str | None = None #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
+        messageDigestAlgorithm : str | None = None #Premis, algo (md5..., etc) utilisé pour calculer le hash #obligatoire
+        messageDigest : str | None = None  #Premis, output du calcul algo #obligatoire
+        size : str | None = None #premis
+        contentLocationType : str | None = None 
+        contentLocationValue : str | None = None #valeur de URI 
+
+        _objectIdentifierValue = 0 #premis obligatoire partout 
+
+        def __post_init__(self):
+            self._objectIdentifierValue +=1
 
 class Report:
     def __init__(self, title, creation_time, author):
@@ -53,7 +61,7 @@ class Report:
         self.actions = {}
        
     def record_it(self, action):
-        ...
+        self.actions.append(action)
 
 class Right:
     def __init__(self,rightsStatementIdentifierType, rightsStatementIdentifierValue):
@@ -83,4 +91,4 @@ class Mets:
                 fieldnames = ['object_name', 'hash']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerow({'object_name': {object.name}, 'hash': {object.hash}})
+                writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
