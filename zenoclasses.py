@@ -1,16 +1,17 @@
 import csv
 from dataclasses import dataclass, field
 
-
+@dataclass
 class Agent:
-    def __init__(self, id, name, role, agent_type, institution, note):
-        self.id = id #Premis
-        self.name = name #Mets name #Premis agentName
-        self.role = role #Mets role
-        self.agent_type = agent_type #METS type #Premis agentType personne, organisation, logiciel
-        self.institution = institution
-        self.note = note #Premis agentNote, facultatif, pour note additionnelle/complémentaire
+        agentName : str #Mets name #Premis agentName
+        agentIdentifierType : str | None = "local"
+        agentType : str | None = "personne" #METS type #Premis agentType personne, organisation, logiciel
+        note : str | None = None #Premis agentNote, facultatif, pour note additionnelle/complémentaire
 
+        _agentIdentifierValue = 0 #Premis #obligatoire partout
+
+        def __post_init__(self):
+            self._agentIdentifierValue +=1        
 """
 Basé sur Event dans PREMIS
 The Event entity aggregates metadata about actions
@@ -77,6 +78,7 @@ class Mets:
         self.hdr_last_mod = hdr_last_mod
         self.hdr_id_producter = hdr_id_producter
         self.hdr_id_production = hdr_id_production
+        self.objects = []
     def set_agent(self, agent):
         self.agents= list[agent]
     def set_event(self, event):
@@ -84,11 +86,12 @@ class Mets:
     def set_right(self, right):
         self.right = list[right]
     def set_object(self, object):
-        self.object = list[object]
-    def write_report(self, file_name, object, type):
+        self.objects.append(object)
+    def write_report(self, file_name, type):
         if type =="hash":
             with open(file_name, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
+                for object in self.objects :
+                    writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})

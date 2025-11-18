@@ -95,12 +95,13 @@ def sail_to_bay(rep, originals, copies, unload_bay, user):
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)            
-            object = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
-            mets.set_object(object)
-            print(object)
+            file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
+            mets.set_object(file)
+            
     event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
-    event.set_agent(user.name) 
-    mets.write_report("report.csv", object, type="hash")
+    event.set_agent(user.name)
+    print(mets.objects) 
+    mets.write_report("report.csv", type="hash")
     robot_copy(rep, originals, unload_bay)
     robot_copy(rep, copies, unload_bay)
     print(mets)
