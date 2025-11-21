@@ -1,4 +1,5 @@
 import csv
+import os
 from dataclasses import dataclass, field
 
 @dataclass
@@ -79,19 +80,32 @@ class Mets:
         self.hdr_id_producter = hdr_id_producter
         self.hdr_id_production = hdr_id_production
         self.objects = []
+    
     def set_agent(self, agent):
         self.agents= list[agent]
+    
     def set_event(self, event):
         self.event= list[event]
+    
     def set_right(self, right):
         self.right = list[right]
+    
     def set_object(self, object):
         self.objects.append(object)
-    def write_report(self, file_name, type):
+
+    def write_report(self, file_name, path, type):
+        file = os.path.join(path, file_name)
         if type =="hash":
-            with open(file_name, 'w', newline='', encoding='utf-8') as f:
+            with open(file, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for object in self.objects :
                     writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
+        elif type=="state":
+            with open(file, "w+t") as state_report:
+                state_report.write(f"Audit of {rep}")
+                state_report.write(f"\nSize of the repository" + full_size + " bytes")
+                state_report.write(f"\nMax-depth: {max_depth}")
+                state_report.write(f"\nStats : {stats}")
+                state_report.write(f"\nReport done with Zenobie at {date} by {us.agentName} ({us.note})")

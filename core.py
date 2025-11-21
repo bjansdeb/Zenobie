@@ -26,17 +26,20 @@ def main():
             break
         except IsADirectoryError:
             raise("Repertory nod valid, retry with a correct path name")        
-        except:
-            raise ValueError("Repertory not valid, retry") 
+        except NotADirectoryError: 
+            raise("Please select a directory and retry")
+        except ValueError:
+            raise ("Repertory not valid, retry") 
+
 
                
 
     originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
         sail_to_bay(repository, originals_repository, 
-                    copies_repository, unload_bay, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
+                    copies_repository, unload_bay, reports, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
-        state_of_art(repository, user.agentName)
+        state_of_art(repository, reports, user)
         while True:
             try:
                 answeer = str(input("May I remove empty repositories(yes or no)?")).lstrip().lower()
@@ -121,11 +124,10 @@ def create_bay(user, project_n):
     
     return project_or, project_cop, unload_bay, reports_project
 
-def sail_to_bay(rep, originals, copies, unload_bay, user):
+def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
     
     """Calcul des hash dans le fichier racine"""
     for root, dirs, files in os.walk(rep): 
-        print ("dirs:", os.path.basename(root))
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)            
@@ -134,17 +136,14 @@ def sail_to_bay(rep, originals, copies, unload_bay, user):
             
     event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
     event.set_agent(user.agentName)
-    print(mets.objects) 
-    mets.write_report("report.csv", type="hash")
-    robot_copy(rep, originals, unload_bay)
-    robot_copy(rep, copies, unload_bay)
-    print(mets)
+    mets.write_report("report.csv", report_r, type="hash")
+    robot_copy(rep, originals, report_r)
+    robot_copy(rep, copies, report_r)
     
 
 """Etat des lieux"""
-def state_of_art(rep, us):
+def state_of_art(rep, reports, us):
     start_depth = 1
-    state_report = open("state_report.txt", "w+t")
     full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
     date = horodatage() #horodatage du rapport
     stats = os.stat(rep)
@@ -152,16 +151,7 @@ def state_of_art(rep, us):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = max(start_depth, current_depth) #calcule la différence entre le niveau 1 et le compte des profondeurs
 
-    # print(f"Audit of {rep}")
-    # print("Size of the repository", full_size + " bytes")    
-    # print("Max-depth:", max_depth)
-    # print("Stats:", stats)
-    # print(f"Report done with Zenobie at {date}")
-    state_report.write(f"Audit of {rep}")
-    state_report.write(f"\nSize of the repository" + full_size + " bytes")
-    state_report.write(f"\nMax-depth: {max_depth}")
-    state_report.write(f"\nStats : {stats}")
-    state_report.write(f"\nReport done with Zenobie at {date} by {us}")
+    mets.write_report("audit_report.txt", reports, "state")
 
 """Décompression des fichiers"""
 def dezip(copies_rep):
