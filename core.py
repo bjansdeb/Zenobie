@@ -17,11 +17,12 @@ def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
-    user = Agent ("0001",name, role, "individual", "AVG-CARHIF", "")
-    repository, originals_repository, copies_repository = "", "", ""
+    user = Agent (name, "local", agentType=None, note=role)
+    repository, originals_repository, copies_repository, project_name  = "", "", "", ""
     while True:
         try:
             repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
+            project_name = os.path.basename(repository)
             break
         except IsADirectoryError:
             raise("Repertory nod valid, retry with a correct path name")        
@@ -30,12 +31,12 @@ def main():
 
                
 
-    originals_repository, copies_repository, unload_bay = create_bay(user)  #création des dossiers de la baie d'arrivage si n'existent pas    
+    originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
         sail_to_bay(repository, originals_repository, 
                     copies_repository, unload_bay, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
-        state_of_art(repository, user.name)
+        state_of_art(repository, user.agentName)
         while True:
             try:
                 answeer = str(input("May I remove empty repositories(yes or no)?")).lstrip().lower()
@@ -51,7 +52,7 @@ def main():
         remove_empty(copies_repository)
         droid_check()
 
-        print(f"Process finished, bye {user.name}")        
+        print(f"Process finished, bye {user.agentName}")        
     else :
         print("Path not correct, retry please")
         pass
@@ -62,7 +63,7 @@ def main():
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
-def create_bay(user):
+def create_bay(user, project_n):
     parent_dir = os.path.dirname(__file__)
     unload_bay = os.path.join(parent_dir, "unload_bay")
 
@@ -73,25 +74,58 @@ def create_bay(user):
         os.mkdir(unload_bay)
 
     original_rep = "original_room"
-    copies_rep = "sorting_room"
     originals = os.path.join(unload_bay, original_rep)
     if os.path.isdir(originals):
         print("Originals repository already exists")
     else :
         os.mkdir(originals)
         print("Originals repository created")
-
+    
+    copies_rep = "sorting_room"
     copies = os.path.join(unload_bay, copies_rep)
     if os.path.isdir(copies):
         print("Copies repository already exists")
     else :
         os.mkdir(copies)
         print("Copies repository created")
-        
-    return originals, copies, unload_bay
+
+    report_rep = "reports"
+    reports = os.path.join(unload_bay, report_rep)
+    if os.path.isdir(reports):
+        print("Reports repository already exists")
+    else :
+        os.mkdir(reports)
+        print("Reports repository created")
+
+    project_or = os.path.join(originals, project_n)
+    if os.path.isdir(project_or):
+        print("Project original repository already exists")
+    else :
+        os.mkdir(project_or)
+        print("Project original repository created")
+
+    project_cop = os.path.join(copies, project_n)
+    if os.path.isdir(project_cop):
+        print("Project copies repository already exists")
+    else :
+        os.mkdir(project_cop)
+        print("Project copies repository created")
+    
+    """Création d'un dossier reports avec un sous-dossier 'reports'"""
+    reports_project = os.path.join(reports, project_n)
+    if os.path.isdir(reports_project):
+        print("Reports sub repository already exists")
+    else :
+        os.mkdir(reports_project)
+        print("Reports sub repository created")
+    
+    return project_or, project_cop, unload_bay, reports_project
 
 def sail_to_bay(rep, originals, copies, unload_bay, user):
+    
+    """Calcul des hash dans le fichier racine"""
     for root, dirs, files in os.walk(rep): 
+        print ("dirs:", os.path.basename(root))
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)            
@@ -99,7 +133,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, user):
             mets.set_object(file)
             
     event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
-    event.set_agent(user.name)
+    event.set_agent(user.agentName)
     print(mets.objects) 
     mets.write_report("report.csv", type="hash")
     robot_copy(rep, originals, unload_bay)
