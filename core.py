@@ -3,8 +3,6 @@ import datetime
 import hashlib
 import os 
 import subprocess
-import shutil
-import sys
 import zipfile
 
 from zenoclasses import Agent, Event, Object, Report, Mets, State
@@ -20,8 +18,8 @@ def main():
     user = Agent (name, "local", agentType=None, note=role)
     repository, originals_repository, copies_repository, project_name  = "", "", "", ""
     while True:
+        repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
         try:
-            repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
             project_name = os.path.basename(repository)
             break
         except IsADirectoryError:
@@ -133,24 +131,25 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
             md5 = hash_calculator(f)            
             file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
             mets.set_object(file)
-    for obj in mets.objects:
-        print ("hash original", obj.messageDigest)
 
 
-
-    event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
+    event = Event("local", eventType="message digest calculation", eventDateTime=horodatage())
     event.set_agent(user.agentName)
     mets.write_report("report.csv", report_r, type="hash")
     robot_copy(rep, originals, report_r)
     robot_copy(rep, copies, report_r)
+    #Event("replication")
+    #Event("transfert")
 
     originals_hash_dict ={}
     """Calcul des hash dans originals et match avec registre"""
     for root, dirs, files in os.walk(originals): 
         for file in files :
             f =os.path.join(root, file)
-            md5 = hash_calculator(f)            
+            md5 = hash_calculator(f) 
+            originals_hash_dict [md5] = f           
             file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
+            #Event ("digital signature generation")
 
     copies_hash_dict = {}
     """Calcul des hash dans copies et match avec registre"""
@@ -158,10 +157,19 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
-            copies_hash_dict = {f, md5}            
+            copies_hash_dict [md5] = f            
             file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
 
-
+    print("copcopies_hash_dict")
+    print("mets_objects", mets.objects)
+    for hash in copies_hash_dict:
+        # print(hash)
+        for obj in mets.objects:
+            # print(obj)
+            if hash not in obj.messageDigest :
+                ...
+                # print(hash, copies_hash_dict[hash])
+                #Event(digital signature validation)
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us):
@@ -185,6 +193,9 @@ def dezip(copies_rep):
                 with zipfile.ZipFile(f, "r") as zip:
                     zip.extractall(root)
                     print("dezip done")
+                    mets.set_event(Event(eventType="Decompression", eventDateTime=horodatage()))
+                
+
 
 def droid_check():
     print("time to droid check")

@@ -1,30 +1,29 @@
 import csv
 import os
 from dataclasses import dataclass, field
+from itertools import count
+
 
 @dataclass
 class Agent:
         agentName : str #Mets name #Premis agentName
         agentIdentifierType : str | None = "local"
+        agentIdentifierValue : int = field(default_factory=count().__next__) #Premis #obligatoire partout
         agentType : str | None = "personne" #METS type #Premis agentType personne, organisation, logiciel
         note : str | None = None #Premis agentNote, facultatif, pour note additionnelle/complémentaire
 
-        _agentIdentifierValue = 0 #Premis #obligatoire partout
-
-        def __post_init__(self):
-            self._agentIdentifierValue +=1    
 
 """
 Basé sur Event dans PREMIS
 The Event entity aggregates metadata about actions
 Event est une action
 """    
+@dataclass
 class Event:
-    def __init__(self,eventIdentifierType, eventIdentifierValue, eventType, eventDateTime):
-        self.eventIdentifierType = eventIdentifierType #premis, obligatoire (local, UUID, )
-        self.eventIdentifierValue = eventIdentifierValue #premis, obligatoire
-        self.eventType = eventType #premis, obligatoire ; voir vc https://id.loc.gov/vocabulary/preservation/eventType.html
-        self.eventDateTime = eventDateTime #premis, obligatoire
+    eventIdentifierType : str | None = "local" #premis, obligatoire (local, UUID, )
+    eventIdentifierValue : int = field(default_factory=count().__next__) #premis, obligatoire
+    eventType : str | None = None#premis, obligatoire ; voir vc https://id.loc.gov/vocabulary/preservation/eventType.html
+    eventDateTime : str |None = None #premis, obligatoire
     
     def set_agent(self, agent):
         self.agent = agent
@@ -52,7 +51,7 @@ class State:
 @dataclass
 class Object:
         objectIdentifierType : str | None = "local"
-        # objectIdentifierValue : int = field(init=False) #premis obligatoire partout 
+        objectIdentifierValue : int = field(default_factory=count().__next__)
         formatName : str | None = None #premis obligatoire partout
         formatVersion : str | None = None #premis version du format mention en nom #facultatif
         formatRegistryName : str | None = None #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
@@ -62,11 +61,6 @@ class Object:
         contentLocationType : str | None = None 
         contentLocationValue : str | None = None #valeur de URI 
 
-        _objectIdentifierValue = 0 #premis obligatoire partout 
-
-        def __post_init__(self):
-            self._objectIdentifierValue +=1
-            print("id caché:", self._objectIdentifierValue)                
 
 class Report:
     def __init__(self, title, creation_time, author):
@@ -92,13 +86,13 @@ class Mets:
         self.hdr_last_mod = hdr_last_mod
         self.hdr_id_producter = hdr_id_producter
         self.hdr_id_production = hdr_id_production
-        self.objects = []
+        self.objects, self.events = [], []
     
     def set_agent(self, agent):
         self.agents= list[agent]
     
     def set_event(self, event):
-        self.event= list[event]
+        self.events.append(event)
     
     def set_right(self, right):
         self.right = list[right]
