@@ -12,7 +12,8 @@ class Agent:
         _agentIdentifierValue = 0 #Premis #obligatoire partout
 
         def __post_init__(self):
-            self._agentIdentifierValue +=1        
+            self._agentIdentifierValue +=1    
+
 """
 Basé sur Event dans PREMIS
 The Event entity aggregates metadata about actions
@@ -37,6 +38,17 @@ class Event:
 Object basé sur Object dans Premis
 
 """
+
+@dataclass
+class State:
+    title : str
+    author : str
+    role : str | None = None
+    full_size : str | None = None
+    date : str | None = None
+    depth : str | None = None
+    stats : str | None = None
+
 @dataclass
 class Object:
         objectIdentifierType : str | None = "local"
@@ -54,6 +66,7 @@ class Object:
 
         def __post_init__(self):
             self._objectIdentifierValue +=1
+            print("id caché:", self._objectIdentifierValue)                
 
 class Report:
     def __init__(self, title, creation_time, author):
@@ -93,7 +106,7 @@ class Mets:
     def set_object(self, object):
         self.objects.append(object)
 
-    def write_report(self, file_name, path, type):
+    def write_report(self, file_name, path, type, cible= None):
         file = os.path.join(path, file_name)
         if type =="hash":
             with open(file, 'w', newline='', encoding='utf-8') as f:
@@ -102,10 +115,12 @@ class Mets:
                 writer.writeheader()
                 for object in self.objects :
                     writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
-        elif type=="state":
-            with open(file, "w+t") as state_report:
-                state_report.write(f"Audit of {rep}")
-                state_report.write(f"\nSize of the repository" + full_size + " bytes")
-                state_report.write(f"\nMax-depth: {max_depth}")
-                state_report.write(f"\nStats : {stats}")
-                state_report.write(f"\nReport done with Zenobie at {date} by {us.agentName} ({us.note})")
+            print(f"Hash report done, see {file}")
+        elif type=="state":            
+            with open(file, "w+t") as state_r:
+                state_r.write(f"Audit of {cible.title}")
+                state_r.write(f"\nSize of the repository" + cible.full_size + " bytes")
+                state_r.write(f"\nMax-depth: {cible.depth}")
+                state_r.write(f"\nStats : {cible.stats}")
+                state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
+            print(f"Audit done, see {file}")

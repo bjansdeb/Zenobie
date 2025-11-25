@@ -7,7 +7,7 @@ import shutil
 import sys
 import zipfile
 
-from zenoclasses import Agent, Event, Object, Report, Mets
+from zenoclasses import Agent, Event, Object, Report, Mets, State
 
 #os.utime() report
 mets = Mets(1, "2020","2021", "Benjamin", 15)
@@ -61,7 +61,7 @@ def main():
         pass
 
 """-----------------------------------------------"""
-"""**** Functions   ****"""
+"""            **** Functions   ****"""
 """-----------------------------------------------"""
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
@@ -133,13 +133,35 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
             md5 = hash_calculator(f)            
             file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
             mets.set_object(file)
-            
+    for obj in mets.objects:
+        print ("hash original", obj.messageDigest)
+
+
+
     event = Event("local", 1, eventType="message digest calculation", eventDateTime=horodatage())
     event.set_agent(user.agentName)
     mets.write_report("report.csv", report_r, type="hash")
     robot_copy(rep, originals, report_r)
     robot_copy(rep, copies, report_r)
-    
+
+    originals_hash_dict ={}
+    """Calcul des hash dans originals et match avec registre"""
+    for root, dirs, files in os.walk(originals): 
+        for file in files :
+            f =os.path.join(root, file)
+            md5 = hash_calculator(f)            
+            file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
+
+    copies_hash_dict = {}
+    """Calcul des hash dans copies et match avec registre"""
+    for root, dirs, files in os.walk(copies): 
+        for file in files :
+            f =os.path.join(root, file)
+            md5 = hash_calculator(f)
+            copies_hash_dict = {f, md5}            
+            file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
+
+
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us):
@@ -149,9 +171,10 @@ def state_of_art(rep, reports, us):
     stats = os.stat(rep)
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
-        max_depth = max(start_depth, current_depth) #calcule la différence entre le niveau 1 et le compte des profondeurs
+        max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
 
-    mets.write_report("audit_report.txt", reports, "state")
+    state_report = State(rep, us.agentName, us.note, full_size, date, max_depth, stats)
+    mets.write_report("audit_report.txt", reports, "state", cible= state_report)
 
 """Décompression des fichiers"""
 def dezip(copies_rep):
