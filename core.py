@@ -167,9 +167,8 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
         for obj in mets.objects:
             # print(obj)
             if hash not in obj.messageDigest :
-                ...
-                # print(hash, copies_hash_dict[hash])
-                #Event(digital signature validation)
+                print(hash, copies_hash_dict[hash])
+    mets.set_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us):
