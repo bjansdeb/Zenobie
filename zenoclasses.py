@@ -1,5 +1,6 @@
 import csv
 import os
+import uuid
 from dataclasses import dataclass, field
 from itertools import count
 
@@ -7,8 +8,8 @@ from itertools import count
 @dataclass
 class Agent:
         agentName : str #Mets name #Premis agentName
-        agentIdentifierType : str | None = "local"
-        agentIdentifierValue : int = field(default_factory=count().__next__) #Premis #obligatoire partout
+        agentIdentifierType : str | None = "UUID"
+        agentIdentifierValue : int= field(default_factory=lambda:uuid.uuid1()) #Premis #obligatoire partout #uuid1 calcule la valeur sur base du temps et de la machine
         agentType : str | None = "personne" #METS type #Premis agentType personne, organisation, logiciel
         note : str | None = None #Premis agentNote, facultatif, pour note additionnelle/complémentaire
 
@@ -20,14 +21,18 @@ Event est une action
 """    
 @dataclass
 class Event:
-    eventIdentifierType : str | None = "local" #premis, obligatoire (local, UUID, )
-    eventIdentifierValue : int = field(default_factory=count().__next__) #premis, obligatoire
+    eventIdentifierType : str | None = "UUID" #premis, obligatoire (local, UUID, )
+    eventIdentifierValue : int = field(default_factory=lambda:uuid.uuid1()) #premis, obligatoire
     eventType : str | None = None#premis, obligatoire ; voir vc https://id.loc.gov/vocabulary/preservation/eventType.html
     eventDateTime : str |None = None #premis, obligatoire
-    
-    def set_agent(self, agent):
-        self.agent = agent
-    
+    linkingObjectIdentifierType : str ="" #à dev plus tard
+    linkingObjectIdentifierValue: str ="" #à dév plus tard
+
+    def set_agent(self, linkingAgentIdentifierType, linkingAgentIdentifierValue, linkingAgentRole):
+        self.linkingAgentIdentifierType = linkingAgentIdentifierType
+        self.linkingAgentIdentifierValue = linkingAgentIdentifierValue
+        self.linkingAgentRole = linkingAgentRole
+
     def display_metadata(self):
         print(self.eventIdentifierType, self.eventIdentifierValue, 
               self.eventType, self.eventDateTime, self.agent)
@@ -50,8 +55,8 @@ class State:
 
 @dataclass
 class Object:
-        objectIdentifierType : str | None = "local"
-        objectIdentifierValue : int = field(default_factory=count().__next__)
+        objectIdentifierType : str | None = "UUID"
+        objectIdentifierValue : int = field(default_factory=lambda:uuid.uuid1())
         formatName : str | None = None #premis obligatoire partout
         formatVersion : str | None = None #premis version du format mention en nom #facultatif
         formatRegistryName : str | None = None #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
@@ -59,8 +64,13 @@ class Object:
         messageDigest : str | None = None  #Premis, output du calcul algo #obligatoire
         size : str | None = None #premis
         contentLocationType : str | None = None 
-        contentLocationValue : str | None = None #valeur de URI 
+        contentLocationValue : str | None = None #valeur de URI
+        originalName : str | None = None 
+        events = []
 
+        def set_event(self, event):
+            self.events.append(event)
+    
 
 class Report:
     def __init__(self, title, creation_time, author):

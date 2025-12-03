@@ -15,7 +15,7 @@ def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
-    user = Agent (name, "local", agentType=None, note=role)
+    user = Agent (name, "UUID", agentType=None, note=role)
     repository, originals_repository, copies_repository, project_name  = "", "", "", ""
     while True:
         repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
@@ -124,18 +124,20 @@ def create_bay(user, project_n):
 
 def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
     
-    """Calcul des hash dans le fichier racine"""
+    """Création des objets et calcul et détermination des hash dans le fichier racine"""
     for root, dirs, files in os.walk(rep): 
         for file in files :
             f =os.path.join(root, file)
-            md5 = hash_calculator(f)            
-            file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
+            md5 = hash_calculator(f)  
+            filename, file_extension = os.path.splitext(f)          
+            file = Object(formatName=file_extension, contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
+            event = Event("local", eventType="digital signature generation", eventDateTime=horodatage())
+            event.set_agent(user.agentIdentifierType, user.agentIdentifierValue, user.agentType)
+            file.set_event(event)
             mets.set_object(file)
 
 
-    event = Event("local", eventType="message digest calculation", eventDateTime=horodatage())
-    event.set_agent(user.agentName)
-    mets.write_report("report.csv", report_r, type="hash")
+    mets.write_report("hash_report.csv", report_r, type="hash")
     robot_copy(rep, originals, report_r)
     robot_copy(rep, copies, report_r)
     #Event("replication")
@@ -148,8 +150,6 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
             f =os.path.join(root, file)
             md5 = hash_calculator(f) 
             originals_hash_dict [md5] = f           
-            file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
-            #Event ("digital signature generation")
 
     copies_hash_dict = {}
     """Calcul des hash dans copies et match avec registre"""
@@ -158,16 +158,24 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
             copies_hash_dict [md5] = f            
-            file = Object(contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5)
 
-    print("copcopies_hash_dict")
-    print("mets_objects", mets.objects)
-    for hash in copies_hash_dict:
-        # print(hash)
-        for obj in mets.objects:
-            # print(obj)
-            if hash not in obj.messageDigest :
-                print(hash, copies_hash_dict[hash])
+    
+    for obj in mets.objects:
+        if all(h in obj.messageDigest for h in originals_hash_dict):
+            ...
+            # print(obj, "Integrity verification is conform")
+        else:
+            ...
+            # print(obj, "this item has an integrity problem")
+
+    for obj in mets.objects:
+        if all(h in obj.messageDigest for h in copies_hash_dict):
+            ...
+            # print(obj, "Integrity verification is conform")
+        else:
+            ...
+            # print(obj, "this item has an integrity problem")
+
     mets.set_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
 
 """Etat des lieux"""
