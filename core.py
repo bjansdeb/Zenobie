@@ -1,12 +1,13 @@
 import csv 
 import datetime 
 import hashlib
-import os 
+import os
+import re 
 import subprocess
 import zipfile
 import sys
-from zenoclasses import Agent, Event, Object, Report, Mets, State
 from errors import EmptyError
+from zenoclasses import Agent, Event, Object, Report, Mets, State
 
 #os.utime() report
 mets = Mets(1, "2020","2021", "Benjamin", 15)
@@ -30,9 +31,6 @@ def main():
         except ValueError:
             raise ("Repertory not valid, retry") 
 
-
-               
-
     originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
         sail_to_bay(repository, originals_repository, 
@@ -52,7 +50,9 @@ def main():
                     raise EmptyError            
             except EmptyError:
                 print("Please, answeer yes or no")
-        remove_empty(copies_repository)
+                
+        # remove_empty(copies_repository)
+        remove_forbidden_chars(copies_repository)
         droid_check()
 
         print(f"Process finished, bye {user.agentName}")        
@@ -237,6 +237,18 @@ def remove_empty(copies_rep):
             print(root) #ajouter un tableau ou un rapport reprenant tous les dossiers vides et demande de confirmation avant de supprimer
             os.rmdir(root)
     print("Empty repertory removed")
+
+def remove_forbidden_chars(repository):
+    for root, dirs, files in os.walk(repository):
+        for file in files:
+            file_lowered = file.lower()
+            matches = re.search(r"^(.+).(.+)$", file_lowered)
+            uncorrect_name = matches.group(1)
+            pattern = re.compile(r"@[\.<>:\"\'/\\|?*\x00-\x1F]")
+            corrected_name = pattern.sub("", uncorrect_name).replace(" ", "-")
+            corrected_file_n = corrected_name + matches.group(2)
+            os.rename(file, corrected_file_n)
+
 
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy

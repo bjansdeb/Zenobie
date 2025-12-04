@@ -82,10 +82,11 @@ class Report:
     def record_it(self, action):
         self.actions.append(action)
 
+@dataclass
 class Right:
-    def __init__(self,rightsStatementIdentifierType, rightsStatementIdentifierValue):
-        self.rightsStatementIdentifierType = rightsStatementIdentifierType #premis
-        self.rightsStatementIdentifierValue = rightsStatementIdentifierValue  #premis
+    rightsStatementIdentifierType: str | None = "UUID" #premis
+    rightsStatementIdentifierValue: int = field(default_factory=lambda:uuid.uuid1()) #premis
+
 
 class Mets:
     def __init__(self, hdr_id, hdr_create_date, 
