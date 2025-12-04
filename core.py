@@ -4,8 +4,9 @@ import hashlib
 import os 
 import subprocess
 import zipfile
-
+import sys
 from zenoclasses import Agent, Event, Object, Report, Mets, State
+from errors import EmptyError
 
 #os.utime() report
 mets = Mets(1, "2020","2021", "Benjamin", 15)
@@ -40,16 +41,17 @@ def main():
         state_of_art(repository, reports, user)
         while True:
             try:
-                answeer = str(input("May I remove empty repositories(yes or no)?")).lstrip().lower()
+                answeer = str(input("May I dezip repositories(yes/no)?")).lstrip().lower()
                 if answeer == "yes":
                     dezip(copies_repository)
                     break
                 elif answeer == "no":
                     print("ok, we continue without dezipping repositories")
-                    break            
-            except ValueError:
+                    break
+                else :
+                    raise EmptyError            
+            except EmptyError:
                 print("Please, answeer yes or no")
-                pass
         remove_empty(copies_repository)
         droid_check()
 
@@ -66,9 +68,29 @@ def main():
 
 def create_bay(user, project_n):
     parent_dir = os.path.dirname(__file__)
-    unload_bay = os.path.join(parent_dir, "unload_bay")
+    filename, file_extension = os.path.splitext(project_n)  
+    project = os.path.join(parent_dir, filename + "_project") #ajoute un dossier de projet avec le nom du fonds d'origine
+    unload_bay = os.path.join(project, "unload_bay")
 
-    """Création de la baie si inexistante"""
+    """Création du projet si inexistant"""
+    if os.path.isdir(project):
+         print("Unload bay already exists")
+         while True :
+            try:
+                answeer = input("Warning, this project already exists. Do you want continue(yes/no) ? If 'no' you will exit the program:").lstrip().lower()       
+                if answeer == "yes":
+                    break
+                elif answeer == "no":
+                    sys.exit()
+                else : 
+                    raise EmptyError    
+            except EmptyError:
+                print("please, answeer by yes or no") 
+
+    else : 
+        os.mkdir(project)
+
+    """Création de la baie si inexistant"""
     if os.path.isdir(unload_bay):
          print("Unload bay already exists")       
     else : 
