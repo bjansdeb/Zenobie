@@ -87,17 +87,15 @@ class Right:
     rightsStatementIdentifierType: str | None = "UUID" #premis
     rightsStatementIdentifierValue: int = field(default_factory=lambda:uuid.uuid1()) #premis
 
-
+@dataclass
 class Mets:
-    def __init__(self, hdr_id, hdr_create_date, 
-                 hdr_last_mod, hdr_id_producter, hdr_id_production):
-        
-        self.hdr_id = hdr_id
-        self.hdr_create_date = hdr_create_date
-        self.hdr_last_mod = hdr_last_mod
-        self.hdr_id_producter = hdr_id_producter
-        self.hdr_id_production = hdr_id_production
-        self.objects, self.events = [], []
+    #hdr_ : métadonnées à l'intérieur du header <metsHdr>, qui comprend les métadonnées sur le document mets lui-même
+    hdr_id : str | None = "H1"
+    hdr_create_date : str | None = None
+    hdr_last_mod : str | None = None
+    hdr_id_producter : str |None = None
+    hdr_id_production : str |None = None
+    objects, events = [], []
     
     def set_agent(self, agent):
         self.agents= list[agent]

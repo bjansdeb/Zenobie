@@ -7,7 +7,7 @@ import subprocess
 import zipfile
 import sys
 from errors import EmptyError
-from zenoclasses import Agent, Event, Object, Report, Mets, State
+from models import Agent, Event, Object, Report, Mets, State
 
 #os.utime() report
 mets = Mets(1, "2020","2021", "Benjamin", 15)
@@ -18,6 +18,7 @@ def main():
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
     user = Agent (name, "UUID", agentType=None, note=role)
+    mets = Mets (hdr_create_date=horodatage(), hdr_id_producter="A1")
     repository, originals_repository, copies_repository, project_name  = "", "", "", ""
     while True:
         repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
@@ -31,17 +32,17 @@ def main():
         except ValueError:
             raise ("Repertory not valid, retry") 
 
-    originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name)  #création des dossiers de la baie d'arrivage si n'existent pas    
+    originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name, mets)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
         sail_to_bay(repository, originals_repository, 
-                    copies_repository, unload_bay, reports, user) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
+                    copies_repository, unload_bay, reports, user, mets) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
-        state_of_art(repository, reports, user)
+        state_of_art(repository, reports, user, mets)
         while True:
             try:
                 answeer = str(input("May I dezip repositories(yes/no)?")).lstrip().lower()
                 if answeer == "yes":
-                    dezip(copies_repository)
+                    dezip(copies_repository, mets)
                     break
                 elif answeer == "no":
                     print("ok, we continue without dezipping repositories")
@@ -52,8 +53,8 @@ def main():
                 print("Please, answeer yes or no")
                 
         # remove_empty(copies_repository)
-        remove_forbidden_chars(copies_repository)
-        droid_check()
+        remove_forbidden_chars(copies_repository, mets)
+        droid_check(mets)
 
         print(f"Process finished, bye {user.agentName}")        
     else :
@@ -144,7 +145,7 @@ def create_bay(user, project_n):
     
     return project_or, project_cop, unload_bay, reports_project
 
-def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
+def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, mets):
     
     """Création des objets et calcul et détermination des hash dans le fichier racine"""
     for root, dirs, files in os.walk(rep): 
@@ -201,7 +202,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user):
     mets.set_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
 
 """Etat des lieux"""
-def state_of_art(rep, reports, us):
+def state_of_art(rep, reports, us, mets):
     start_depth = 1
     full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
     date = horodatage() #horodatage du rapport
@@ -214,7 +215,7 @@ def state_of_art(rep, reports, us):
     mets.write_report("audit_report.txt", reports, "state", cible= state_report)
 
 """Décompression des fichiers"""
-def dezip(copies_rep):
+def dezip(copies_rep, mets):
     for root, dirs, files in os.walk(copies_rep):
         for file in files :
             f = os.path.join(root, file)
@@ -226,11 +227,11 @@ def dezip(copies_rep):
                 
 
 
-def droid_check():
+def droid_check(mets):
     print("time to droid check")
     ...
 """Suppression de dossiers vides"""
-def remove_empty(copies_rep):
+def remove_empty(copies_rep, mets):
     for root, dirs, files in os.walk(copies_rep):
         bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
         if bytes == 0:
@@ -238,7 +239,7 @@ def remove_empty(copies_rep):
             os.rmdir(root)
     print("Empty repertory removed")
 
-def remove_forbidden_chars(repository):
+def remove_forbidden_chars(repository, mets):
     for root, dirs, files in os.walk(repository):
         for file in files:
             file_lowered = file.lower()
@@ -250,7 +251,7 @@ def remove_forbidden_chars(repository):
             os.rename(file, corrected_file_n)
 
 
-def robot_copy(source, destination, log_repository):
+def robot_copy(source, destination, log_repository, mets):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
                     "/e", "/copyall", f"/log+:{log_repository}/transfert_report.txt"], 
