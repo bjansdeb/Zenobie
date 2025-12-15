@@ -68,6 +68,9 @@ class Object:
         originalName : str | None = None 
         events = []
 
+        # def __eq__(self, copy_messageDigest):
+        #     return self.messageDigest == copy_messageDigest
+
         def set_event(self, event):
             self.events.append(event)
     
@@ -96,7 +99,7 @@ class Mets:
     hdr_id_producter : str |None = None
     hdr_id_production : str |None = None
     objects, events = [], []
-    
+
     def set_agent(self, agent):
         self.agents= list[agent]
     
@@ -127,3 +130,11 @@ class Mets:
                 state_r.write(f"\nStats : {cible.stats}")
                 state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
             print(f"Audit done, see {file}")
+        elif type=="event":
+            with open(file, "w+t") as event_r:
+                for event in cible.events:
+                    event_r.write(f"Event id type:{event.eventIdentifierType}")
+                    event_r.write(f"\nEvent id:{event.eventIdentifierValue}")
+                    event_r.write(f"\nEvent type: {event.eventType}")
+                    event_r.write(f"\nEvent date time:{event.eventDateTime}")
+            print(f"Events report done, see {file}")
