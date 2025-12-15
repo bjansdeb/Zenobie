@@ -1,5 +1,3 @@
-import csv
-import os
 import uuid
 from dataclasses import dataclass, field
 from itertools import count
@@ -25,8 +23,9 @@ class Event:
     eventIdentifierValue : int = field(default_factory=lambda:uuid.uuid1()) #premis, obligatoire
     eventType : str | None = None#premis, obligatoire ; voir vc https://id.loc.gov/vocabulary/preservation/eventType.html
     eventDateTime : str |None = None #premis, obligatoire
-    linkingObjectIdentifierType : str ="" #à dev plus tard
-    linkingObjectIdentifierValue: str ="" #à dév plus tard
+    eventOutcomeDetailNote: str | None = ""
+    linkingObjectIdentifierType : str | None = None #à dev plus tard
+    linkingObjectIdentifierValue: str | None = None #à dév plus tard
 
     def set_agent(self, linkingAgentIdentifierType, linkingAgentIdentifierValue, linkingAgentRole):
         self.linkingAgentIdentifierType = linkingAgentIdentifierType
@@ -112,29 +111,5 @@ class Mets:
     def set_object(self, object):
         self.objects.append(object)
 
-    def write_report(self, file_name, path, type, cible= None):
-        file = os.path.join(path, file_name)
-        if type =="hash":
-            with open(file, 'w', newline='', encoding='utf-8') as f:
-                fieldnames = ['object_name', 'hash']
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                for object in self.objects :
-                    writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
-            print(f"Hash report done, see {file}")
-        elif type=="state":            
-            with open(file, "w+t") as state_r:
-                state_r.write(f"Audit of {cible.title}")
-                state_r.write(f"\nSize of the repository" + cible.full_size + " bytes")
-                state_r.write(f"\nMax-depth: {cible.depth}")
-                state_r.write(f"\nStats : {cible.stats}")
-                state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
-            print(f"Audit done, see {file}")
-        elif type=="event":
-            with open(file, "w+t") as event_r:
-                for event in cible.events:
-                    event_r.write(f"Event id type:{event.eventIdentifierType}")
-                    event_r.write(f"\nEvent id:{event.eventIdentifierValue}")
-                    event_r.write(f"\nEvent type: {event.eventType}")
-                    event_r.write(f"\nEvent date time:{event.eventDateTime}")
-            print(f"Events report done, see {file}")
+    # def get_object(self, object):
+    #      self.objects.

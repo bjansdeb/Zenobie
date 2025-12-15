@@ -2,7 +2,7 @@ import os
 import sys
 from errors import EmptyError
 from models import Agent, Event, Object, Report, Mets, State
-from util import create_bay, create_objects, sail_to_bay, state_of_art, dezip, droid_check, remove_empty, remove_forbidden_chars, robot_copy, hash_calculator, horodatage
+from util import create_bay, create_objects, sail_to_bay, state_of_art, dezip, droid_check, remove_empty, remove_forbidden_chars, write_report, horodatage
 
 #os.utime() report
 mets = Mets(1, "2020","2021", "Benjamin", 15)
@@ -54,15 +54,16 @@ def main():
                 print("Please, answeer yes or no")
                 
         #remove_empty(copies_repository)
-        remove_forbidden_chars(copies_repository, mets)
+        remove_forbidden_chars(copies_repository, reports, mets)
         droid_check(repository, mets)
-        mets.write_report("events_report.txt", reports, type="event", cible=mets)
+        print("mets event", mets.events)
+        write_report("events_report.txt", reports, type="event", cible=mets)
         while True:
             try:
                 input(f"Process successfully finished {user.agentName}, do ctrl+c to quit the program")
                 if sys.exit():
-                    raise EOFError
-            except EOFError:
+                    raise KeyboardInterrupt
+            except KeyboardInterrupt:
                 print("script closed")
                 sys.exit()
     else :
