@@ -51,7 +51,7 @@ def main():
             except EmptyError:
                 print("Please, answeer yes or no")
                 
-        remove_empty(copies_repository, mets)
+        #remove_empty(copies_repository, mets) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
         remove_forbidden_chars(copies_repository, reports, mets)
         droid_check(repository, mets)
         write_report("events_report.txt", reports, type="event", cible=mets)

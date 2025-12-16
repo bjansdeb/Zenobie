@@ -99,7 +99,8 @@ def create_objects(rep, report_r, user, mets):
     for root, dirs, files in os.walk(rep): 
         for file in files :
             f =os.path.join(root, file)
-            md5 = hash_calculator(f)  
+            md5 = hash_calculator(f)
+            #droid_check(f, mets)  
             filename, file_extension = os.path.splitext(f)          
             file = Object(formatName=file_extension, contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
             event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcomeDetailNote= str(file.messageDigest), 
@@ -179,9 +180,14 @@ def dezip(copies_rep, mets):
                     mets.set_event(Event(eventType="Decompression", eventDateTime=horodatage()))
 
 def droid_check(rep, mets):
-    result = subprocess.run(["droid", "-a", rep], text=True)
-    print("time to droid check", result)
-    ...
+    
+    """à rajouter plus tard, pour obtenir certains types de métadonnées"""
+    #$ droid -co NAME PUID -a file.jpg
+    #"NAME","PUID"
+    #"file.jpg","fmt/1507"
+    """"""
+    result = subprocess.run(["droid.bat", "-a", rep, "-R"], text=True, check=True)
+
 """Suppression de dossiers vides"""
 def remove_empty(copies_rep, mets):
     for root, dirs, files in os.walk(copies_rep):
@@ -192,16 +198,19 @@ def remove_empty(copies_rep, mets):
     print("Empty repertory removed")
 
 def remove_forbidden_chars(rep, report_r, mets):
+    #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
     for root, dirs, files in os.walk(rep):
         for file in files:
-            file_lowered = file.lower()
-            matches = re.search(r"^(.+).(.+)$", file_lowered)
-            uncorrect_name = matches.group(1)
-            pattern = re.compile(r"@[\.<>:\"\'/\\|?*\x00-\x1F]")
-            corrected_name = pattern.sub("", uncorrect_name).replace(" ", "-")
-            corrected_file_n = corrected_name + matches.group(2)
+            filename, file_extension = os.path.splitext(file)  
+            file_lowered = filename.lower()
+            pattern = re.compile(r"@[\[\.<>:\"\'/\\|?*\x00-\x1F]")
+            corrected_name = pattern.sub("", file_lowered).replace(" ", "-")
+            corrected_file_n = corrected_name + file_extension
             os.rename(file, corrected_file_n)
-            write_report("rename_report.txt", report_r, type="rename", cible=mets)
+            event = Event(eventType="filename change", eventDateTime=horodatage(), eventOutcomeDetailNote=f"Original name: {filename} - New name {corrected_file_n}")
+            mets.set_event(event)
+    write_report("rename_report.txt", report_r, type="rename", cible=mets)
+    print("Rename report done")
 
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
@@ -257,5 +266,6 @@ def write_report(file_name, path, type, cible= None):
 
     elif type=="rename":
         with open(file, "w+t") as rename_r:
-            for name in cible:
-                rename_r.write(f"Original name : {name} - New name: {name} ")
+            for name in cible.events:
+                if name.eventType == "filename change":
+                    rename_r.write(str(event.eventOutcomeDetailNote))

@@ -37,10 +37,6 @@ class Event:
               self.eventType, self.eventDateTime, self.agent)
 
 
-"""
-Object basé sur Object dans Premis
-
-"""
 
 @dataclass
 class State:
@@ -52,6 +48,9 @@ class State:
     depth : str | None = None
     stats : str | None = None
 
+"""
+Object basé sur Object dans Premis
+"""
 @dataclass
 class Object:
         objectIdentifierType : str | None = "UUID"
