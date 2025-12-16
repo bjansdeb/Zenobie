@@ -165,7 +165,7 @@ def state_of_art(rep, reports, us, mets):
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
 
     state_report = State(rep, us.agentName, us.note, full_size, date, max_depth, stats)
-    mets.write_report("audit_report.txt", reports, "state", cible= state_report)
+    write_report("audit_report.txt", reports, "state", cible= state_report)
 
 """Décompression des fichiers"""
 def dezip(copies_rep, mets):
@@ -178,8 +178,9 @@ def dezip(copies_rep, mets):
                     print("dezip done")
                     mets.set_event(Event(eventType="Decompression", eventDateTime=horodatage()))
 
-def droid_check(repository, mets):
-    print("time to droid check")
+def droid_check(rep, mets):
+    result = subprocess.run(["droid", "-a", rep], text=True)
+    print("time to droid check", result)
     ...
 """Suppression de dossiers vides"""
 def remove_empty(copies_rep, mets):

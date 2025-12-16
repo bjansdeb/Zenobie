@@ -5,8 +5,6 @@ from models import Agent, Event, Object, Report, Mets, State
 from util import create_bay, create_objects, sail_to_bay, state_of_art, dezip, droid_check, remove_empty, remove_forbidden_chars, write_report, horodatage
 
 #os.utime() report
-mets = Mets(1, "2020","2021", "Benjamin", 15)
-
 
 def main():
     
@@ -53,10 +51,9 @@ def main():
             except EmptyError:
                 print("Please, answeer yes or no")
                 
-        #remove_empty(copies_repository)
+        remove_empty(copies_repository, mets)
         remove_forbidden_chars(copies_repository, reports, mets)
         droid_check(repository, mets)
-        print("mets event", mets.events)
         write_report("events_report.txt", reports, type="event", cible=mets)
         while True:
             try:
