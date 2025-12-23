@@ -1,7 +1,7 @@
 import os
 import sys
 from errors import EmptyError
-from models import Agent, Event, Object, Report, Mets, State
+from models import Agent, Event, Object, Report, Mets, PremisObjects, State
 from util import create_bay, create_objects, sail_to_bay, state_of_art, dezip, droid_check, remove_empty, remove_forbidden_chars, write_report, horodatage
 
 #os.utime() report
@@ -12,7 +12,8 @@ def main():
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
     user = Agent (name, "UUID", agentType=None, note=role)
-    mets = Mets (hdr_create_date=horodatage(), hdr_id_producter="A1")
+    mets = Mets(hdr_create_date=horodatage(), hdr_id_producter="A1")
+    registre = PremisObjects()
     repository, originals_repository, copies_repository, project_name  = "", "", "", ""
 
 

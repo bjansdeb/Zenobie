@@ -323,6 +323,31 @@ class Right:
     rightsStatementIdentifierValue: int = field(default_factory=lambda:uuid.uuid1()) #premis
 
 @dataclass
+class PremisObjects:
+    """
+    Docstring for PremisObjects
+    Recense tous les objets PREMIS créés au cours du processus
+    """
+    agents : dict[str, Agent] = {}
+    events : dict[str, Event] = {}
+    objects : dict[str, Object] = {}
+    rights : dict[str, Right] = {}
+    
+    def set_agent(self, agent):
+        self.agents[agent.agentIdentifierValue] = agent
+    
+    def set_event(self, event):
+        self.events[event.eventIdentifierValue] = event
+    
+    def set_right(self, right):
+        self.right = list[right]
+    
+    def set_object(self, object):
+        self.objects[object.objectIdentifierValue] = object
+
+    # def get_object(self, object):
+    #      self.objects.
+@dataclass
 class Mets:
     #hdr_ : métadonnées à l'intérieur du header <metsHdr>, qui comprend les métadonnées sur le document mets lui-même
     hdr_id : str | None = "H1"
@@ -330,19 +355,3 @@ class Mets:
     hdr_last_mod : str | None = None
     hdr_id_producter : str |None = None
     hdr_id_production : str |None = None
-    objects, events = [], []
-
-    def set_agent(self, agent):
-        self.agents= list[agent]
-    
-    def set_event(self, event):
-        self.events.append(event)
-    
-    def set_right(self, right):
-        self.right = list[right]
-    
-    def set_object(self, object):
-        self.objects.append(object)
-
-    # def get_object(self, object):
-    #      self.objects.

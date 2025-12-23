@@ -7,7 +7,7 @@ import subprocess
 import sys
 import zipfile
 from errors import EmptyError
-from models import Event, Object, State
+from models import Event, Object, PremisObjects, State
 
 
 """-----------------------------------------------"""
