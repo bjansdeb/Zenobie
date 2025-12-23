@@ -126,6 +126,10 @@ class Object:
 
         relations = []
         """1.13 relationship (O, R)"""
+        """relations documentation"""
+        """Information about a relationship between this Object and one or more
+        other Objects."""
+        """Dans le cas de event, permet de documenter """
         relationshipType : RelationshipType | None = None #(M, NR) exemple : "derivation"
         relationshipSubType : RelationshipSubType |None = None #(M, NR) exemple : "has source"
         """1.13.3 relatedObjectIdentifier (M, R)"""
@@ -134,13 +138,19 @@ class Object:
         relatedObjectSequence: str | None = None #(O, NR)
 
         """1.13.4 relatedEventIdentifier (O, R) """
+        """An Object may be related to another Object because of an Event, for example, migration."""
         relatedEventIdentifierType : str | None = None #(M, NR)
         relatedEventIdentifierValue : str | None = None #(M, NR)
         relatedEventSequence : str | None = None #(O, NR) 
 
         events = []
+        """linking documentation"""
+        """Used to link to Events that are not associated with relationships
+        between Objects, such as format validation, virus checking, etc. """
         """1.14  linkingEventIdentifier (O, R)""" #container
-        linkingEventIdentifierType : int | None #(M, NR)
+        #The eventIdentifier of an Event associated with the Object.
+        #The eventIdentifierValue value of the related Event (Must be an existing eventIdentifierValue value.).
+        linkingEventIdentifierType :str | None #(M, NR)
         linkingEventIdentifierValue : str | None #(M, NR)
         """1.15  linkingRightsStatementIdentifier #(O, R)""" #container 
         linkingRightsStatementIdentifierType : str # (M, NR)
