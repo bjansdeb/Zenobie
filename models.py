@@ -1,7 +1,9 @@
 import uuid
 from dataclasses import dataclass, field
 from itertools import count
+from vocabularies import *
 
+#PREMIS metadata originated from https://www.loc.gov/standards/premis/v3/premis-hierarchical-3-0.html
 
 @dataclass
 class Agent:
@@ -19,6 +21,17 @@ class Agent:
         """3.6    agentExtension (O, R)"""
         agentExtension : str | None = None #Premis container pour les éléments hors PREMIS
 
+        """3.7 linkingEventIdentifier (O, R)""" #container
+        linkingEventIdentifierType : str | None  #(M, NR)
+        linkingEventIdentifierValue : str | None # (M, NR)
+        """3.8 linkingRightsStatementIdentifier (O, R)"""#container
+        linkingRightsStatementIdentifierType : str | None # (M, NR)
+        linkingRightsStatementIdentifierValue : str | None # (M, NR)
+        """3.9 linkingEnvironmentIdentifier (O, R)""" #container
+        linkingEnvironmentIdentifierType : str | None # (M, NR)
+        linkingEnvironmentIdentifierValue : str | None # (M, NR)
+        linkingEnvironmentRole : str | None # (O, R)
+
 
 """
 Basé sur Event dans PREMIS
@@ -31,7 +44,7 @@ class Event:
     eventIdentifierType : str | None = "UUID" #premis, obligatoire (local, UUID, )
     eventIdentifierValue : int = field(default_factory=lambda:uuid.uuid1()) #premis, obligatoire
     """2.2    eventType (M, NR)"""
-    eventType : str | None = None#premis, obligatoire ; voir vc https://id.loc.gov/vocabulary/preservation/eventType.html
+    eventType : EventType #premis, obligatoire
 
     """2.3    eventDateTime (M, NR)"""
     eventDateTime : str |None = None #premis, obligatoire
@@ -80,34 +93,58 @@ Object basé sur Object dans Premis
 """
 @dataclass
 class Object:
-        objectIdentifierType : str | None = "UUID"
-        objectIdentifierValue : int = field(default_factory=lambda:uuid.uuid1())
-        formatName : str | None = None #premis obligatoire partout
-        formatVersion : str | None = None #premis version du format mention en nom #facultatif
+        """1.1 objectIdentifier"""
+        objectIdentifierType : str | None = "UUID" #(M, NR)
+        objectIdentifierValue : int = field(default_factory=lambda:uuid.uuid1()) #(M, NR)
         formatRegistryName : str | None = None #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
         
-        """1.5    objectCharacteristics"""
-        messageDigestAlgorithm : str | None = None #Premis, algo (md5..., etc) utilisé pour calculer le hash #obligatoire
-        messageDigest : str | None = None  #Premis, output du calcul algo #obligatoire
-        size : str | None = None #premis
+        """1.2    objectCategory (M, NR)"""
+        objectCategory : str | None = None
+        """1.3 preservationLevel [Intellectual Entity/Representation/File]"""
+        
+        """1.4    significantProperties (O, R)"""
+        significantProperties: str | None #(propriété significative) (O, R)
+        significantPropertiesType: str | None #(type de propriété significative) (O, NR)
+        significantPropertiesValue: str | None #(valeur de la propriété significative) (O, NR)
+        significantPropertiesExtension: str | None #(extension pour les propriétés significatives) (O, # R) 
+
+        """1.5    objectCharacteristics [File/Bitstream]""" #(M, R, File / Bitstream not IE/R)
+
+        """1.6    originalName (O, NR) [Intellectual Entity, Representation, File]"""
 
         """1.7    storage (O, R) [Representation, File, Bitstream]"""
-        contentLocationType : str | None = None 
-        contentLocationValue : str | None = None #valeur de URI
-        originalName : str | None = None 
-        events = []
 
-        """1.10 relationship (O, R)"""
-        relationshipType : str | None = None #(M, R)
-        relationshipSubType : str |None = None #(M, R)
-        """1.10.3 relatedObjectIdentification (M, R)"""
-        relatedObjectIdentifierType : str | None = None #(M, R)
-        relatedObjectIdentifierValue : str | None = None #(M, R)
+        """1.8    signatureInformation (O, R) [File, Bitstream]"""
+
+        ##Non implémenté à ce stade, propre à PREMIS 3
+        """1.9    environmentFunction (O, R) [Intellectual Entity of type environment]"""
+        """1.10  environmentDesignation (O, R) [Intellectual Entity of type environment]"""
+        """1.11  environmentRegistry (O, R) [Intellectual Entity of type environment]"""
+        """1.12  environmentExtension (O, R) [Intellectual Entity of type environment]"""
+        ##Non implémenté à ce stade, propre à PREMIS 3
+
+
+        relations = []
+        """1.13 relationship (O, R)"""
+        relationshipType : RelationshipType | None = None #(M, NR) exemple : "derivation"
+        relationshipSubType : RelationshipSubType |None = None #(M, NR) exemple : "has source"
+        """1.13.3 relatedObjectIdentifier (M, R)"""
+        relatedObjectIdentifierType : str | None = None #(M, R) #exemple : "REPPID"
+        relatedObjectIdentifierValue : str | None = None #(M, R) #exemple : "17415495"
         relatedObjectSequence: str | None = None #(O, NR)
-        """1.101.4 relatedEventIdentification (O, R) """
+
+        """1.13.4 relatedEventIdentifier (O, R) """
         relatedEventIdentifierType : str | None = None #(M, NR)
         relatedEventIdentifierValue : str | None = None #(M, NR)
         relatedEventSequence : str | None = None #(O, NR) 
+
+        events = []
+        """1.14  linkingEventIdentifier (O, R)""" #container
+        linkingEventIdentifierType : int | None #(M, NR)
+        linkingEventIdentifierValue : str | None #(M, NR)
+        """1.15  linkingRightsStatementIdentifier #(O, R)""" #container 
+        linkingRightsStatementIdentifierType : str # (M, NR)
+        linkingRightsStatementIdentifierValue : str  #(M, NR)        
 
 
         # def __eq__(self, copy_messageDigest):
@@ -118,16 +155,147 @@ class Object:
 
 
 #enfants de Object, pour les trois types conseillés par PREMIS
-class Bitstreal(Object):
-     ...
+class Bitstream(Object):
+    """1.5    objectCharacteristics [file/bitstream]""" #(M, R, File / Bitstream not IE/R)
+    compositionLevel : str | None = None #(O, NR) [File, Bitstream]
+    """1.5.2 fixity""" #(O, R) [File, Bitstream]
+    messageDigestAlgorithm : str | None = None #(M, NR)Premis, algo (md5..., etc) utilisé pour calculer le hash #obligatoire
+    messageDigest : str | None = None  #(M, NR) [File, Bitstream] Premis, output du calcul algo #obligatoire     
+    messageDigestOriginator : str | None = None #(O, NR) [File, Bitstream]
+    
+    """1.5.3 size"""
+    size : int | None = None #(O, NR) [File, Bitstream] premis
+
+    """1.5.4 format""" #(M, R) [File, Bitstream]
+    """1.5.4.1 formatDesignation""" # (O, NR) [File, Bitstream]
+    formatName : str | None = None #(M, NR)
+    formatVersion : str | None = None #(O, NR)
+    """1.5.4.2 formatRegistry"""  #(O, NR)
+    formatRegistryName : str | None = None # (M, NR) exemple : "PRONOM"
+    formatRegistryKey : str | None = None  #(M, NR)
+    formatRegistryRole : str | None = None #(O, NR) exemple : "specification"
+
+    """1.5.5    creatingApplication (O, R) [File, Bitstream]"""
+    creatingApplicationName : str | None #(O, NR) [File, Bitstream]
+    creatingApplicationVersion : str | None #(O, NR) [File, Bitstream]
+    dateCreatedByApplication : str | None #(O, NR) [File, Bitstream]
+    creatingApplicationExtension : str | None #(O, R) [File, Bitstream]
+    """1.5.6    inhibitors (O, R) [File, Bitstream]"""
+    inhibitorType  : str | None = None  #(M, NR) [File, Bitstream]
+    inhibitorTarget  : str | None = None #(O, R) [File, Bitstream]
+    inhibitorKey : str | None = None  #(O, NR) [File, Bitstream]
+    """1.5.7    objectCharacteristicsExtension"""
+    objectCharacteristicsExtension : str | None = None     #(O, R) [File, Bitstream]
+
+    """1.7    storage (O, R) [Representation, File, Bitstream]"""
+    """1.7.1    contentLocation (O, NR) [Representation, File, Bitstream]""" #container
+    contentLocationType : str | None = None  #(M, NR) [Representation, File, Bitstream]
+    contentLocationValue : str | None = None #(M, NR) [Representation, File, Bitstream]
+
+    """1.7.2    storageMedium (O, NR) [Representation, File, Bitstream]"""
+
+    """1.8    signatureInformation (O, R) [File, Bitstream]"""
+    """1.8.1    signature (O, R) [File, Bitstream]""" #container
+    signatureEncoding : str | None #(M, NR) [File, Bitstream]
+    signer : str | None  #(O, NR) [File, Bitstream]
+    signatureMethod : str | None  # (M, NR) [File, Bitstream]
+    signatureValue : str | None # (M, NR) [File, Bitstream]
+    signatureValidationRules : str | None # (M, NR) [File, Bitstream]
+    signatureProperties : str | None # (O, R) [File, Bitstream]
+    keyInformation : str | None  #(O, NR) [File, Bitstream]
+    """1.8.2    signatureInformationExtension (O, R) [File, Bitstream]"""
+    signatureInformationExtension : str | None    
 
 class File(Object):
-     ...
+    """1.3 preservationLevel [representation/file/intellectual entity]"""
+    preservationLevelType : str | None = None 
+    preservationLevelValue : str | None = None #(M, NR)
+    preservationLevelRole : str | None = None #(O, NR)
+    preservationLevelRationale : str | None = None #(O, R) 
+    preservationLevelDateAssigned : str | None = None #(O, NR) 
 
-class Representation(Object):
-     ...
-
+    """1.5    objectCharacteristics [file/bitstream]""" #(M, R, File / Bitstream not IE/R)
+    compositionLevel : str | None = None #(O, NR) [File, Bitstream]
+    """1.5.2 fixity""" #(O, R) [File, Bitstream]
+    messageDigestAlgorithm : str | None = None #(M, NR)Premis, algo (md5..., etc) utilisé pour calculer le hash #obligatoire
+    messageDigest : str | None = None  #(M, NR) [File, Bitstream] Premis, output du calcul algo #obligatoire     
+    messageDigestOriginator : str | None = None #(O, NR) [File, Bitstream]
     
+    """1.5.3 size"""
+    size : int | None = None #(O, NR) [File, Bitstream] premis
+
+    """1.5.4 format""" #(M, R) [File, Bitstream]
+    """1.5.4.1 formatDesignation""" # (O, NR) [File, Bitstream]
+    formatName : str | None = None #(M, NR)
+    formatVersion : str | None = None #(O, NR)
+    """1.5.4.2 formatRegistry"""  #(O, NR)
+    formatRegistryName : str | None = None # (M, NR) exemple : "PRONOM"
+    formatRegistryKey : str | None = None  #(M, NR)
+    formatRegistryRole : str | None = None #(O, NR) exemple : "specification"
+
+    """1.5.5    creatingApplication (O, R) [File, Bitstream]"""
+    creatingApplicationName : str | None #(O, NR) [File, Bitstream]
+    creatingApplicationVersion : str | None #(O, NR) [File, Bitstream]
+    dateCreatedByApplication : str | None #(O, NR) [File, Bitstream]
+    creatingApplicationExtension : str | None #(O, R) [File, Bitstream]
+    """1.5.6    inhibitors (O, R) [File, Bitstream]"""
+    inhibitorType  : str | None = None  #(M, NR) [File, Bitstream]
+    inhibitorTarget  : str | None = None #(O, R) [File, Bitstream]
+    inhibitorKey : str | None = None  #(O, NR) [File, Bitstream]
+    """1.5.7    objectCharacteristicsExtension"""
+    objectCharacteristicsExtension : str | None = None     #(O, R) [File, Bitstream]
+    
+    """1.6    originalName (O, NR) [Intellectual Entity, Representation, File]"""
+    originalName : str | None = None 
+
+    """1.7    storage (O, R) [Representation, File, Bitstream]"""
+    """1.7.1    contentLocation (O, NR) [Representation, File, Bitstream]""" #container
+    contentLocationType : str | None = None  #(M, NR) [Representation, File, Bitstream]
+    contentLocationValue : str | None = None #(M, NR) [Representation, File, Bitstream]
+
+    """1.7.2    storageMedium (O, NR) [Representation, File, Bitstream]"""
+
+    """1.8    signatureInformation (O, R) [File, Bitstream]"""
+    """1.8.1    signature (O, R) [File, Bitstream]""" #container
+    signatureEncoding : str | None #(M, NR) [File, Bitstream]
+    signer : str | None  #(O, NR) [File, Bitstream]
+    signatureMethod : str | None  # (M, NR) [File, Bitstream]
+    signatureValue : str | None # (M, NR) [File, Bitstream]
+    signatureValidationRules : str | None # (M, NR) [File, Bitstream]
+    signatureProperties : str | None # (O, R) [File, Bitstream]
+    keyInformation : str | None  #(O, NR) [File, Bitstream]
+    """1.8.2    signatureInformationExtension (O, R) [File, Bitstream]"""
+    signatureInformationExtension : str | None    
+
+class IntellectualEntity(Object):
+    """1.3 preservationLevel [representation/file/intellectual entity]"""
+    preservationLevelType : str | None = None 
+    preservationLevelValue : str | None = None #(M, NR)
+    preservationLevelRole : str | None = None #(O, NR)
+    preservationLevelRationale : str | None = None #(O, R) 
+    preservationLevelDateAssigned : str | None = None #(O, NR) 
+   
+    """1.6    originalName (O, NR) [Intellectual Entity, Representation, File]"""
+    originalName : str | None = None 
+    
+class Representation(Object):
+    """1.3 preservationLevel [representation/file]"""
+    preservationLevelType : str | None = None 
+    preservationLevelValue : str | None = None #(M, NR)
+    preservationLevelRole : str | None = None #(O, NR)
+    preservationLevelRationale : str | None = None #(O, R) 
+    preservationLevelDateAssigned : str | None = None #(O, NR) 
+    
+    """1.6    originalName (O, NR) [Intellectual Entity, Representation, File]"""
+    originalName : str | None = None 
+
+    """1.7    storage (O, R) [Representation, File, Bitstream]"""
+    """1.7.1    contentLocation (O, NR) [Representation, File, Bitstream]""" #container
+    contentLocationType : str | None = None  #(M, NR) [Representation, File, Bitstream]
+    contentLocationValue : str | None = None #(M, NR) [Representation, File, Bitstream]
+
+    """1.7.2    storageMedium (O, NR) [Representation, File, Bitstream]"""
+
 
 class Report:
     def __init__(self, title, creation_time, author):
