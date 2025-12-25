@@ -29,20 +29,20 @@ def main():
         except ValueError:
             raise ("Repertory not valid, retry") 
 
-    originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name, mets)  #création des dossiers de la baie d'arrivage si n'existent pas    
+    originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name, registre)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
-        create_objects(repository, reports, user, mets)
+        create_objects(repository, reports, user, registre)
     
     if os.path.isdir(repository):
         sail_to_bay(repository, originals_repository, 
-                    copies_repository, unload_bay, reports, user, mets) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
+                    copies_repository, unload_bay, reports, user, registre) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
-        state_of_art(repository, reports, user, mets)
+        state_of_art(repository, reports, user, registre)
         while True:
             try:
                 answeer = str(input("May I dezip repositories(yes/no)?")).lstrip().lower()
                 if answeer == "yes":
-                    dezip(copies_repository, mets)
+                    dezip(copies_repository, registre)
                     break
                 elif answeer == "no":
                     print("ok, we continue without dezipping repositories")
@@ -52,10 +52,10 @@ def main():
             except EmptyError:
                 print("Please, answeer yes or no")
                 
-        #remove_empty(copies_repository, mets) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
-        remove_forbidden_chars(copies_repository, reports, mets)
-        droid_check(repository, mets)
-        write_report("events_report.txt", reports, type="event", cible=mets)
+        #remove_empty(copies_repository, registre) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
+        remove_forbidden_chars(copies_repository, reports, registre)
+        droid_check(repository, registre)
+        write_report("events_report.txt", reports, type="event", cible=registre)
         while True:
             try:
                 input(f"Process successfully finished {user.agentName}, do ctrl+c to quit the program")

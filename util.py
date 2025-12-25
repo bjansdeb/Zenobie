@@ -7,7 +7,7 @@ import subprocess
 import sys
 import zipfile
 from errors import EmptyError
-from models import Event, Object, PremisObjects, State
+from models import Event, Object, PremisObjects, State, File
 
 
 """-----------------------------------------------"""
@@ -16,7 +16,7 @@ from models import Event, Object, PremisObjects, State
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
-def create_bay(user, project_n, mets):
+def create_bay(user, project_n, registre):
     parent_dir = os.path.dirname(__file__)
     filename, file_extension = os.path.splitext(project_n)  
     project = os.path.join(parent_dir, filename + "_project") #ajoute un dossier de projet avec le nom du fonds d'origine
@@ -94,27 +94,27 @@ def create_bay(user, project_n, mets):
     
     return project_or, project_cop, unload_bay, reports_project
 
-def create_objects(rep, report_r, user, mets):
+def create_objects(rep, report_r, user, registre):
     """Création des objets et calcul et détermination des hash dans le fichier racine"""
     for root, dirs, files in os.walk(rep): 
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
-            #droid_check(f, mets)  
+            #droid_check(f, registre)  
             filename, file_extension = os.path.splitext(f)          
-            file = Object(formatName=file_extension, contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
+            file = File(formatName=file_extension, contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
             event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcomeDetailNote= str(file.messageDigest), 
                           linkingObjectIdentifierType= str(file.objectIdentifierValue))
             event.set_agent(user.agentIdentifierType, user.agentIdentifierValue, user.agentType)
-            mets.set_event(event)
-            mets.set_object(file)
+            registre.set_event(event)
+            registre.set_object(file)
 
 
-    write_report("source_manifest_md5.csv", report_r, type="hash", cible=mets)
+    write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
 
-def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, mets):
+def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     
-    # mets.write_report("hash_report.csv", report_r, type="hash")
+    # registre.write_report("hash_report.csv", report_r, type="hash")
     robot_copy(rep, originals, report_r)
     robot_copy(rep, copies, report_r)
     #Event("replication")
@@ -137,7 +137,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, mets):
             copies_hash_dict [md5] = f            
 
     
-    for obj in mets.objects:
+    for obj in registre.objects:
         if all(h in obj.messageDigest for h in originals_hash_dict):
             ...
             # print(obj, "Integrity verification is conform")
@@ -145,7 +145,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, mets):
             ...
             # print(obj, "this item has an integrity problem")
 
-    for obj in mets.objects:
+    for obj in registre.objects:
         if all(h in obj.messageDigest for h in copies_hash_dict):
             ...
             # print(obj, "Integrity verification is conform")
@@ -153,10 +153,10 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, mets):
             ...
             # print(obj, "this item has an integrity problem")
 
-    mets.set_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
+    registre.set_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
 
 """Etat des lieux"""
-def state_of_art(rep, reports, us, mets):
+def state_of_art(rep, reports, us, registre):
     start_depth = 1
     full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
     date = horodatage() #horodatage du rapport
@@ -169,7 +169,7 @@ def state_of_art(rep, reports, us, mets):
     write_report("audit_report.txt", reports, "state", cible= state_report)
 
 """Décompression des fichiers"""
-def dezip(copies_rep, mets):
+def dezip(copies_rep, registre):
     for root, dirs, files in os.walk(copies_rep):
         for file in files :
             f = os.path.join(root, file)
@@ -177,9 +177,9 @@ def dezip(copies_rep, mets):
                 with zipfile.ZipFile(f, "r") as zip:
                     zip.extractall(root)
                     print("dezip done")
-                    mets.set_event(Event(eventType="Decompression", eventDateTime=horodatage()))
+                    registre.set_event(Event(eventType="Decompression", eventDateTime=horodatage()))
 
-def droid_check(rep, mets):
+def droid_check(rep, registre):
     
     """à rajouter plus tard, pour obtenir certains types de métadonnées"""
     #$ droid -co NAME PUID -a file.jpg
@@ -189,7 +189,7 @@ def droid_check(rep, mets):
     result = subprocess.run(["droid.bat", "-a", rep, "-R"], text=True, check=True)
 
 """Suppression de dossiers vides"""
-def remove_empty(copies_rep, mets):
+def remove_empty(copies_rep, registre):
     for root, dirs, files in os.walk(copies_rep):
         bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
         if bytes == 0:
@@ -197,7 +197,7 @@ def remove_empty(copies_rep, mets):
             os.rmdir(root)
     print("Empty repertory removed")
 
-def remove_forbidden_chars(rep, report_r, mets):
+def remove_forbidden_chars(rep, report_r, registre):
     #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
     for root, dirs, files in os.walk(rep):
         for file in files:
@@ -208,8 +208,8 @@ def remove_forbidden_chars(rep, report_r, mets):
             corrected_file_n = corrected_name + file_extension
             os.rename(file, corrected_file_n)
             event = Event(eventType="filename change", eventDateTime=horodatage(), eventOutcomeDetailNote=f"Original name: {filename} - New name {corrected_file_n}")
-            mets.set_event(event)
-    write_report("rename_report.txt", report_r, type="rename", cible=mets)
+            registre.set_event(event)
+    write_report("rename_report.txt", report_r, type="rename", cible=registre)
     print("Rename report done")
 
 def robot_copy(source, destination, log_repository):
