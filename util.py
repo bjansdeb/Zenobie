@@ -176,7 +176,8 @@ def dezip(copies_rep, registre):
                 with zipfile.ZipFile(f, "r") as zip:
                     zip.extractall(root)
                     print("dezip done")
-                    registre.set_event(Event(eventType="Decompression", eventDateTime=horodatage()))
+                    registre.set_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}" eventDateTime=horodatage()))
+                    #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
 
 def droid_check(rep, registre):
     

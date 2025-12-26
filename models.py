@@ -159,7 +159,7 @@ class Object:
 
     # def __eq__(self, copy_messageDigest):
     #     return self.messageDigest == copy_messageDigest
-    def set_event(self, event):
+    def set_linking_event(self, event):
         self.events.append(event)
 
 
@@ -344,7 +344,7 @@ class PremisObjects:
         self.events[event.eventIdentifierValue] = event
     
     def set_right(self, right):
-        self.right = list[right]
+        self.rights[right.rightsStatementIdentifierValue] = right
     
     def set_object(self, object):
         self.objects[object.objectIdentifierValue] = object
