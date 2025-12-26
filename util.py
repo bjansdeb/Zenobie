@@ -102,13 +102,12 @@ def create_objects(rep, report_r, user, registre):
             md5 = hash_calculator(f)
             #droid_check(f, registre)  
             filename, file_extension = os.path.splitext(f)          
-            file = File(formatName=file_extension, contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
+            file = File(objectCategory="file", formatName=file_extension, contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
             event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcomeDetailNote= str(file.messageDigest), 
                           linkingObjectIdentifierType= str(file.objectIdentifierValue))
             event.set_agent(user.agentIdentifierType, user.agentIdentifierValue, user.agentType)
             registre.set_event(event)
             registre.set_object(file)
-
 
     write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
 
@@ -239,7 +238,7 @@ def write_report(file_name, path, type, cible= None):
             fieldnames = ['object_name', 'hash']
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            for object in cible.objects :
+            for object in cible.objects.values() :
                 writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
         print(f"Hash report done, see {file}")
 
@@ -255,7 +254,7 @@ def write_report(file_name, path, type, cible= None):
     elif type=="event":
         with open(file, "w+t") as event_r:
             event_r.write(f"\nEvents report")
-            for event in cible.events:
+            for event in cible.events.values():
                 event_r.write(f"\nEvent: {event.eventType}")
                 event_r.write(f"\nEvent id type: {event.eventIdentifierType}")
                 event_r.write(f"\nEvent id: {event.eventIdentifierValue}")
@@ -266,6 +265,6 @@ def write_report(file_name, path, type, cible= None):
 
     elif type=="rename":
         with open(file, "w+t") as rename_r:
-            for name in cible.events:
+            for name in cible.events.values():
                 if name.eventType == "filename change":
                     rename_r.write(str(event.eventOutcomeDetailNote))
