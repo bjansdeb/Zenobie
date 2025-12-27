@@ -106,9 +106,11 @@ def create_objects(rep, report_r, user, registre):
             event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcomeDetailNote= str(file.messageDigest), 
                           linkingObjectIdentifierType= str(file.objectIdentifierValue))
             event.set_agent(user.agentIdentifierType, user.agentIdentifierValue, user.agentType)
-            registre.set_event(event)
-            registre.set_object(file)
+            registre.add_event(event)
+            registre.add_object(file)
+            registre.add_uri(f, file)
 
+    registre.get_uris()
     write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
 
 def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
@@ -152,7 +154,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
             ...
             # print(obj, "this item has an integrity problem")
 
-    registre.set_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
+    registre.add_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
@@ -176,7 +178,7 @@ def dezip(copies_rep, registre):
                 with zipfile.ZipFile(f, "r") as zip:
                     zip.extractall(root)
                     print("dezip done")
-                    registre.set_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}" eventDateTime=horodatage()))
+                    registre.add_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}", eventDateTime=horodatage()))
                     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
 
 def droid_check(rep, registre):
@@ -208,7 +210,7 @@ def remove_forbidden_chars(rep, report_r, registre):
             corrected_file_n = corrected_name + file_extension
             os.rename(file, corrected_file_n)
             event = Event(eventType="filename change", eventDateTime=horodatage(), eventOutcomeDetailNote=f"Original name: {filename} - New name {corrected_file_n}")
-            registre.set_event(event)
+            registre.add_event(event)
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
     print("Rename report done")
 
@@ -222,7 +224,7 @@ def robot_copy(source, destination, log_repository):
 def hash_calculator(source):
     # sha_256 = hashlib.sha256() #à décocher si on veut cet algo à la place de md5
     md5 = hashlib.md5()
-    print(source)
+    #print(source)
     with open(source, 'rb') as file:
         while chunk := file.read(8192):
             md5.update(chunk)

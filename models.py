@@ -9,7 +9,7 @@ from vocabularies import *
 class Agent:
     """3.1    agentIdentifier (M, R)"""
     agentIdentifierType : str | None = "UUID"
-    agentIdentifierValue : int= field(default_factory=lambda:uuid.uuid1()) #Premis #obligatoire partout #uuid1 calcule la valeur sur base du temps et de la machine
+    agentIdentifierValue : str= field(default_factory=lambda:uuid.uuid1().hex) #Premis #obligatoire partout #uuid1 calcule la valeur sur base du temps et de la machine
     """3.2    agentName (O, R)"""
     agentName : str | None = None #Mets name #Premis agentName
     """3.3    agentType (O, NR)"""
@@ -42,7 +42,7 @@ Event est une action
 class Event:
     """2.1    eventIdentifier (M, NR)"""
     eventIdentifierType : str | None = "UUID" #premis, obligatoire (local, UUID, )
-    eventIdentifierValue : int = field(default_factory=lambda:uuid.uuid1()) #premis, obligatoire
+    eventIdentifierValue : str = field(default_factory=lambda:uuid.uuid1().hex) #premis, obligatoire
     """2.2    eventType (M, NR)"""
     eventType : EventType | None = None  #premis, obligatoire
 
@@ -95,7 +95,7 @@ Object basé sur Object dans Premis
 class Object:
     """1.1 objectIdentifier"""
     objectIdentifierType : str | None = "UUID" #(M, NR)
-    objectIdentifierValue : int = field(default_factory=lambda:uuid.uuid1()) #(M, NR)
+    objectIdentifierValue : str = field(default_factory=lambda:uuid.uuid1().hex) #(M, NR)
     formatRegistryName : str | None = None #premis Une désignation identifiant le registre de format référencé (Pronom) #obligatoire
     
     """1.2    objectCategory (M, NR)"""
@@ -324,33 +324,46 @@ class Report:
 @dataclass
 class Right:
     rightsStatementIdentifierType: str | None = "UUID" #premis
-    rightsStatementIdentifierValue: int = field(default_factory=lambda:uuid.uuid1()) #premis
+    rightsStatementIdentifierValue: str = field(default_factory=lambda:uuid.uuid1().hex) #premis
 
 @dataclass
 class PremisObjects:
     """
     Docstring for PremisObjects
     Recense tous les objets PREMIS créés au cours du processus
+    Contient un jeu de clés physiques provisoires pour suivre les objets via leurs URIS
     """
-    agents : dict[str, Agent] = field(default_factory=dict) #dict[str, Agent] = {}
+    #tri par UUID
+    agents : dict[str, Agent] = field(default_factory=dict) 
     events : dict[str, Event] = field(default_factory=dict)
     objects : dict[str, Object] = field(default_factory=dict)
     rights : dict[str, Right] = field(default_factory=dict)
     
-    def set_agent(self, agent):
+    #tri par path/uri
+    uris : list[str, Object] = field(default_factory=dict)
+    
+    def add_agent(self, agent):
         self.agents[agent.agentIdentifierValue] = agent
     
-    def set_event(self, event):
+    def add_event(self, event):
         self.events[event.eventIdentifierValue] = event
     
-    def set_right(self, right):
+    def add_right(self, right):
         self.rights[right.rightsStatementIdentifierValue] = right
     
-    def set_object(self, object):
+    def add_object(self, object):
         self.objects[object.objectIdentifierValue] = object
+    
+    def add_uri(self, uri, object):
+        self.uris[uri] = object.objectIdentifierValue
 
-    # def get_object(self, object):
-    #      self.objects.
+    def adapt_uri(self, objects, new_uri): #à corriger
+        for object in objects.values():
+            self.uris[object.objectIdentifierValue] = new_uri
+
+    def get_uris(self):
+        print(self.uris)
+
 @dataclass
 class Mets:
     #hdr_ : métadonnées à l'intérieur du header <metsHdr>, qui comprend les métadonnées sur le document mets lui-même
