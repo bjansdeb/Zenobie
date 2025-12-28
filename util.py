@@ -110,7 +110,7 @@ def create_objects(rep, report_r, user, registre):
             registre.add_object(file)
             registre.add_uri(f, file)
 
-    registre.get_uris()
+    #registre.get_uris()
     write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
 
 def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
@@ -120,7 +120,6 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     robot_copy(rep, copies, report_r)
     #Event("replication")
     #Event("transfert")
-
     originals_hash_dict ={}
     """Calcul des hash dans originals et match avec registre"""
     for root, dirs, files in os.walk(originals): 
@@ -136,9 +135,8 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
             copies_hash_dict [md5] = f            
-
     
-    for obj in registre.objects:
+    for obj in registre.objects.values():
         if all(h in obj.messageDigest for h in originals_hash_dict):
             ...
             # print(obj, "Integrity verification is conform")
@@ -146,7 +144,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
             ...
             # print(obj, "this item has an integrity problem")
 
-    for obj in registre.objects:
+    for obj in registre.objects.values():
         if all(h in obj.messageDigest for h in copies_hash_dict):
             ...
             # print(obj, "Integrity verification is conform")
