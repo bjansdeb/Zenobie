@@ -52,8 +52,8 @@ class Event:
     eventDetail : str | None = None
     eventDetailExtension : str | None = None
     """2.5    eventOutcomeInformation (O, R)"""
-    eventOutcome : str = "Success" 
-    eventOutcomeDetailNote: str | None = ""
+    eventOutcome : str | None = None
+    eventOutcomeDetailNote: str | None = "" #permet de record les anomalies liées à un résultat insatisfaisait, ex = prob de hash
 
     """2.6    linkingAgentIdentifier (O, R)"""
     linkingAgentIdentifierType : str =""

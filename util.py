@@ -102,8 +102,8 @@ def create_objects(rep, report_r, user, registre):
             md5 = hash_calculator(f)
             #droid_check(f, registre)  
             filename, file_extension = os.path.splitext(f)          
-            file = File(objectCategory="file", formatName=file_extension, contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
-            event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcomeDetailNote= str(file.messageDigest), 
+            file = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
+            event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcome="success", eventDetail= str(file.messageDigest), 
                           linkingObjectIdentifierType= str(file.objectIdentifierValue))
             event.set_agent(user.agentIdentifierType, user.agentIdentifierValue, user.agentType)
             registre.add_event(event)
@@ -136,23 +136,23 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
             md5 = hash_calculator(f)
             copies_hash_dict [md5] = f            
     
-    for obj in registre.objects.values():
-        if all(h in obj.messageDigest for h in originals_hash_dict):
-            ...
-            # print(obj, "Integrity verification is conform")
-        else:
-            ...
-            # print(obj, "this item has an integrity problem")
+    # for obj in registre.objects.values():
+    #     if all(h in obj.messageDigest for h in originals_hash_dict):
+    #         print("Integrity verification on originals is conform")
+    #     else:
+    #         print("Integrity verification on non originals is not conform")
 
     for obj in registre.objects.values():
-        if all(h in obj.messageDigest for h in copies_hash_dict):
-            ...
-            # print(obj, "Integrity verification is conform")
+        if obj.messageDigest in copies_hash_dict:
+            old_location =  obj.contentLocationValue
+            obj.contentLocationValue = copies_hash_dict[obj.messageDigest]
+            registre.add_event(Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="sucess", 
+                                     eventDetail= f"path {old_location} changed to {obj.contentLocationValue}"))           
         else:
-            ...
-            # print(obj, "this item has an integrity problem")
+            print("warning, this object has a problematic check")
 
     registre.add_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
+    write_report("moving_report.txt", report_r, "transfer", cible=registre )
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
@@ -207,8 +207,7 @@ def remove_forbidden_chars(rep, report_r, registre):
             corrected_name = pattern.sub("", file_lowered).replace(" ", "-")
             corrected_file_n = corrected_name + file_extension
             os.rename(file, corrected_file_n)
-            event = Event(eventType="filename change", eventDateTime=horodatage(), eventOutcomeDetailNote=f"Original name: {filename} - New name {corrected_file_n}")
-            registre.add_event(event)
+            registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventOutcomeDetailNote=f"Original name: {filename} - New name {corrected_file_n}"))
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
     print("Rename report done")
 
@@ -232,40 +231,57 @@ def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
 
 def write_report(file_name, path, type, cible= None):
+    """
+    Docstring for write_report
+    Function d'écriture des rapports
+    :param file_name: Nom du fichier
+    :param path: Emplacement
+    :param type: hash, state, event, transfer, rename
+    :param cible: objet sur lequel porte le rapport
+    """
     file = os.path.join(path, file_name)
+    match type:
+        case "hash":
+            with open(file, 'w', newline='', encoding='utf-8') as f:
+                fieldnames = ['object_name', 'hash']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for object in cible.objects.values() :
+                    writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
+            print(f"Hash report done, see {file}")
 
-    if type =="hash":
-        with open(file, 'w', newline='', encoding='utf-8') as f:
-            fieldnames = ['object_name', 'hash']
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            for object in cible.objects.values() :
-                writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
-        print(f"Hash report done, see {file}")
-
-    elif type=="state":            
-        with open(file, "w+t") as state_r:
-            state_r.write(f"Audit of {cible.title}")
-            state_r.write(f"\nSize of the repository" + cible.full_size + " bytes")
-            state_r.write(f"\nMax-depth: {cible.depth}")
-            state_r.write(f"\nStats : {cible.stats}")
-            state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
-        print(f"Audit done, see {file}")
-
-    elif type=="event":
-        with open(file, "w+t") as event_r:
-            event_r.write(f"\nEvents report")
-            for event in cible.events.values():
-                event_r.write(f"\nEvent: {event.eventType}")
-                event_r.write(f"\nEvent id type: {event.eventIdentifierType}")
-                event_r.write(f"\nEvent id: {event.eventIdentifierValue}")
-                event_r.write(f"\nEvent date time: {event.eventDateTime}")
-                event_r.write(f"\nEvent outcome detail: {event.eventOutcomeDetailNote}")
-                event_r.write(f"\nCible object identifier: {event.linkingObjectIdentifierType} ")
-        print(f"Events report done, see {file}")
-
-    elif type=="rename":
-        with open(file, "w+t") as rename_r:
-            for name in cible.events.values():
-                if name.eventType == "filename change":
-                    rename_r.write(str(event.eventOutcomeDetailNote))
+        case "state":           
+            with open(file, "w+t") as state_r:
+                state_r.write(f"Audit of {cible.title}")
+                state_r.write(f"\nSize of the repository" + cible.full_size + " bytes")
+                state_r.write(f"\nMax-depth: {cible.depth}")
+                state_r.write(f"\nStats : {cible.stats}")
+                state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
+            print(f"Audit done, see {file}")
+ 
+        case "event":
+            with open(file, "w+t") as event_r:
+                event_r.write(f"\nEvents report")
+                for event in cible.events.values():
+                    event_r.write(f"\nEvent: {event.eventType}")
+                    event_r.write(f"\nEvent id type: {event.eventIdentifierType}")
+                    event_r.write(f"\nEvent id: {event.eventIdentifierValue}")
+                    event_r.write(f"\nEvent date time: {event.eventDateTime}")
+                    event_r.write(f"\nEvent detail: {event.eventDetail}")
+                    event_r.write(f"\nCible object identifier: {event.linkingObjectIdentifierType} ")
+            print(f"Events report done, see {file}")
+        
+        case "transfer":
+            with open(file, "w+t") as transf_r:
+                transf_r.write(f"Transfert report")
+                for event in cible.events.values():
+                    if event.eventType == "transfer":
+                        transf_r.write(f"\nEvent id type: {event.eventIdentifierType}")
+                        transf_r.write(f"\nEvent id: {event.eventIdentifierValue}")
+                        transf_r.write(f"\nEvent date time: {event.eventDateTime}")
+                        transf_r.write(f"\nEvent detail: {event.eventDetail}")
+        case "rename":
+            with open(file, "w+t") as rename_r:
+                for name in cible.events.values():
+                    if name.eventType == "filename change":
+                        rename_r.write(str(event.eventOutcomeDetailNote))
