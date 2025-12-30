@@ -2,8 +2,25 @@ import uuid
 from dataclasses import dataclass, field
 from itertools import count
 from vocabularies import *
-
+from typing import List
 #PREMIS metadata originated from https://www.loc.gov/standards/premis/v3/premis-hierarchical-3-0.html
+
+@dataclass(frozen=True)
+class LinkingEventIdentifier:
+    linkingEventIdentifierType: str
+    linkingEventIdentifierValue: str
+
+@dataclass(frozen=True)
+class LinkingAgentIdentifier:
+    linkingAgentIdentifierType: str
+    linkingAgentIdentifierValue: str
+    linkingAgentRole : str = "" 
+
+@dataclass(frozen=True)
+class LinkingObjectIdentifier:
+    linkingObjectIdentifierType : str | None = None 
+    linkingObjectIdentifierValue: str | None = None 
+    linkingObjectRole : str | None = None
 
 @dataclass
 class Agent:
@@ -56,21 +73,37 @@ class Event:
     eventOutcomeDetailNote: str | None = "" #permet de record les anomalies liées à un résultat insatisfaisait, ex = prob de hash
 
     """2.6    linkingAgentIdentifier (O, R)"""
-    linkingAgentIdentifierType : str =""
-    linkingAgentIdentifierValue : str = ""
-    linkingAgentRole : str = "" 
+    linkingAgentIdentifier : List[LinkingAgentIdentifier] = field(default_factory=list)
+    #voir container
+    # linkingAgentIdentifierType : str =""
+    # linkingAgentIdentifierValue : str = ""
+    # linkingAgentRole : str = "" 
 
     """2.7    linkingObjectIdentifier (O, R)"""
-    linkingObjectIdentifierType : str | None = None #à dev plus tard
-    linkingObjectIdentifierValue: str | None = None #à dév plus tard
-    linkingObjectRole : str | None = None #à dév plus tard
+    linkingObjectIdentifier : List[LinkingObjectIdentifier] = field(default_factory=list)
+    # linkingObjectIdentifierType : str | None = None #à dev plus tard
+    # linkingObjectIdentifierValue: str | None = None #à dév plus tard
+    # linkingObjectRole : str | None = None #à dév plus tard
 
 
 
-    def set_agent(self, linkingAgentIdentifierType, linkingAgentIdentifierValue, linkingAgentRole):
-        self.linkingAgentIdentifierType = linkingAgentIdentifierType
-        self.linkingAgentIdentifierValue = linkingAgentIdentifierValue
-        self.linkingAgentRole = linkingAgentRole
+    def add_linking_agent(self, agent):
+        self.linkingAgentIdentifier.append(
+            LinkingAgentIdentifier(
+                linkingAgentIdentifierType=agent.agentIdentifierType,
+                linkingAgentIdentifierValue=agent.agentIdentifierValue
+            )
+        )
+    
+    def add_linking_object(self, object):
+        self.linkingObjectIdentifier.append(
+            LinkingObjectIdentifier(
+                linkingObjectIdentifierType= object.objectIdentifierType,
+                linkingObjectIdentifierValue= object.objectIdentifierValue,
+                linkingObjectRole= object.linkingObjectRole
+            )
+        )
+
 
     def display_metadata(self):
         print(self.eventIdentifierType, self.eventIdentifierValue, 
@@ -143,24 +176,26 @@ class Object:
     relatedEventIdentifierValue : str | None = None #(M, NR)
     relatedEventSequence : str | None = None #(O, NR) 
 
-    events = []
     """linking documentation"""
     """Used to link to Events that are not associated with relationships
     between Objects, such as format validation, virus checking, etc. """
     """1.14  linkingEventIdentifier (O, R)""" #container
+    linkingEventIdentifiers: List[LinkingEventIdentifier] = field(default_factory=list)
     #The eventIdentifier of an Event associated with the Object.
     #The eventIdentifierValue value of the related Event (Must be an existing eventIdentifierValue value.).
-    linkingEventIdentifierType :str | None = None #(M, NR)
-    linkingEventIdentifierValue : str | None = None #(M, NR)
+    # linkingEventIdentifierType :str | None = None #(M, NR) #utilisé dans le container
+    # linkingEventIdentifierValue : str | None = None #(M, NR) #utiliser dans le container
     """1.15  linkingRightsStatementIdentifier #(O, R)""" #container 
     linkingRightsStatementIdentifierType : str | None = None # (M, NR)
     linkingRightsStatementIdentifierValue : str | None = None #(M, NR)        
 
-
-    # def __eq__(self, copy_messageDigest):
-    #     return self.messageDigest == copy_messageDigest
-    def set_linking_event(self, event):
-        self.events.append(event)
+    def add_linking_event(self, event):
+        self.linkingEventIdentifiers.append(
+            LinkingEventIdentifier(
+                linkingEventIdentifierType=event.eventIdentifierType,
+                linkingEventIdentifierValue=event.eventIdentifierValue
+            )
+        )
 
 
 
