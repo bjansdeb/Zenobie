@@ -20,7 +20,7 @@ class LinkingAgentIdentifier:
 class LinkingObjectIdentifier:
     linkingObjectIdentifierType : str | None = None 
     linkingObjectIdentifierValue: str | None = None 
-    linkingObjectRole : str | None = None
+    linkingObjectRole : str | None = ""
 
 @dataclass
 class Agent:
@@ -95,12 +95,12 @@ class Event:
             )
         )
     
-    def add_linking_object(self, object):
+    def add_linking_object(self, object, role):
         self.linkingObjectIdentifier.append(
             LinkingObjectIdentifier(
                 linkingObjectIdentifierType= object.objectIdentifierType,
                 linkingObjectIdentifierValue= object.objectIdentifierValue,
-                linkingObjectRole= object.linkingObjectRole
+                linkingObjectRole = role
             )
         )
 

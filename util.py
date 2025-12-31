@@ -96,20 +96,20 @@ def create_bay(user, project_n, registre):
 
 def create_objects(rep, report_r, user, registre):
     """Création des objets et calcul et détermination des hash dans le fichier racine"""
+
     for root, dirs, files in os.walk(rep): 
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
-            #droid_check(f, registre)  
             filename, file_extension = os.path.splitext(f)          
-            file = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
-            event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcome="success", eventDetail= str(file.messageDigest))
+            obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
+            event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventDetail=obj.messageDigest, eventOutcome="success")
             event.add_linking_agent(user)
-            file.add_linking_event(event)
-            registre.add_event(event)
-            registre.add_object(file)
-            registre.add_uri(f, file)
-
+            obj.add_linking_event(event)
+            event.add_linking_object(obj, "source")
+            registre.add_event(event)              
+            registre.add_object(obj)
+            registre.add_uri(f, obj)
     #registre.get_uris()
     write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
 
@@ -141,18 +141,20 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     #         print("Integrity verification on originals is conform")
     #     else:
     #         print("Integrity verification on non originals is not conform")
-    event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventOutcome="success", eventDetail= str(obj.messageDigest))
     for obj in registre.objects.values():
         if obj.messageDigest in copies_hash_dict:
             old_location =  obj.contentLocationValue
             obj.contentLocationValue = copies_hash_dict[obj.messageDigest]
+            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="success", eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue}")
             obj.add_linking_event(event)
-            event.add_linking_object(obj)
+            event.add_linking_object(obj, "outcome")
             registre.add_event(event)           
         else:
-            print("warning, this object has a problematic check")
-
-    registre.add_event(Event(eventType="digital signature validation", eventDateTime=horodatage()))
+            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="failure", eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue} has failed")
+            obj.add_linking_event(event)
+            event.add_linking_object(obj, "outcome")
+            registre.add_event(event)    
+            print(f"warning, this object {obj} has a problematic check")
     write_report("moving_report.txt", report_r, "transfer", cible=registre )
 
 """Etat des lieux"""
@@ -269,7 +271,8 @@ def write_report(file_name, path, type, cible= None):
                     event_r.write(f"\nEvent id: {event.eventIdentifierValue}")
                     event_r.write(f"\nEvent date time: {event.eventDateTime}")
                     event_r.write(f"\nEvent detail: {event.eventDetail}")
-                    event_r.write(f"\nCible object identifier: {event.linkingObjectIdentifier.linkingObjectIdentifierValue} ")
+                    for items in event.linkingObjectIdentifier :
+                        event_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue} ")
             print(f"Events report done, see {file}")
         
         case "transfer":
@@ -281,9 +284,13 @@ def write_report(file_name, path, type, cible= None):
                         transf_r.write(f"\nEvent id: {event.eventIdentifierValue}")
                         transf_r.write(f"\nEvent date time: {event.eventDateTime}")
                         transf_r.write(f"\nEvent detail: {event.eventDetail}")
-                        transf_r.write(f"\nCible object identifier: {event.linkingObjectIdentifier.linkingObjectIdentifierValue}")
+                        for items in event.linkingObjectIdentifier:
+                            transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
+            print(f"Transfer report done, see {file}")
+
         case "rename":
             with open(file, "w+t") as rename_r:
                 for name in cible.events.values():
                     if name.eventType == "filename change":
                         rename_r.write(str(event.eventDetail))
+            print(f"Rename report done, see {file}")
