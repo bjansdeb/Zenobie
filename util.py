@@ -7,7 +7,7 @@ import subprocess
 import sys
 import zipfile
 from errors import EmptyError
-from models import Event, Object, PremisObjects, State, File
+from models import Event, PremisObjects, State, File
 
 
 """-----------------------------------------------"""
@@ -204,13 +204,14 @@ def remove_forbidden_chars(rep, report_r, registre):
     #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
     for root, dirs, files in os.walk(rep):
         for file in files:
+            f = os.path.join(root, file)
             filename, file_extension = os.path.splitext(file)  
             file_lowered = filename.lower()
-            pattern = re.compile(r"@[\[\.<>:\"\'/\\|?*\x00-\x1F]")
+            pattern = re.compile(r"[@\[\[\.<>:\"\'/\\|?*\x00-\x1F]")
             corrected_name = pattern.sub("", file_lowered).replace(" ", "-")
             corrected_file_n = corrected_name + file_extension
-            os.rename(file, corrected_file_n)
-            registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventOutcomeDetailNote=f"Original name: {filename} - New name {corrected_file_n}"))
+            os.rename(f, corrected_file_n)
+            registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name {corrected_file_n}"))
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
     print("Rename report done")
 
@@ -290,7 +291,11 @@ def write_report(file_name, path, type, cible= None):
 
         case "rename":
             with open(file, "w+t") as rename_r:
-                for name in cible.events.values():
-                    if name.eventType == "filename change":
-                        rename_r.write(str(event.eventDetail))
+                for event in cible.events.values():
+                    if event.eventType == "filename change":
+                        rename_r.write(f"\nEvent id type: {event.eventIdentifierType}")
+                        rename_r.write(f"\nEvent detail: {event.eventDetail}")
+                        for items in event.linkingObjectIdentifier:
+                            transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
+
             print(f"Rename report done, see {file}")
