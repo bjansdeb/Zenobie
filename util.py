@@ -182,14 +182,15 @@ def dezip(copies_rep, registre):
                     registre.add_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}", eventDateTime=horodatage()))
                     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
 
-def droid_check(rep, registre):
+def droid_check(rep, reports, registre):
     
     """à rajouter plus tard, pour obtenir certains types de métadonnées"""
     #$ droid -co NAME PUID -a file.jpg
     #"NAME","PUID"
     #"file.jpg","fmt/1507"
     """"""
-    result = subprocess.run(["droid.bat", "-a", rep, "-R"], text=True, check=True)
+    result = subprocess.run(["droid.bat", "-a", rep, "-R"], text=True, capture_output=True, check=True)
+    write_report("droid_report.txt", reports, "droid", result)
 
 """Suppression de dossiers vides"""
 def remove_empty(copies_rep, registre):
@@ -208,13 +209,13 @@ def remove_forbidden_chars(rep, report_r, registre):
             filename, file_extension = os.path.splitext(file)  
             file_lowered = filename.lower()
             pattern = re.compile(r"[@\[\[\.<>:\"\'/\\|?*\x00-\x1F]")
-            corrected_name = pattern.sub("", file_lowered).replace(" ", "-")
+            corrected_name = pattern.sub("-", file_lowered).replace(" ", "-")
             corrected_file_n = corrected_name + file_extension
-            os.rename(f, corrected_file_n)
-            registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name {corrected_file_n}"))
+            corrected_f = os.path.join(root, corrected_file_n)
+            os.rename(f, corrected_f)
+            registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name: {corrected_file_n}"))
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
-    print("Rename report done")
-
+    
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
@@ -245,6 +246,10 @@ def write_report(file_name, path, type, cible= None):
     """
     file = os.path.join(path, file_name)
     match type:
+        case "droid":
+            with open(file, "w+t") as droid_r:
+                droid_r.write("Droid identification report")
+                droid_r.write(f"{cible.stdout}")
         case "hash":
             with open(file, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']

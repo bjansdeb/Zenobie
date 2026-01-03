@@ -11,7 +11,7 @@ def main():
     print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
-    user = Agent (name, "UUID", agentType=None, note=role)
+    user = Agent (agentName=name, agentType=None, note=role)
     mets = Mets(hdr_create_date=horodatage(), hdr_id_producter="A1")
     registre = PremisObjects()
     repository, originals_repository, copies_repository, project_name  = "", "", "", ""
@@ -54,7 +54,7 @@ def main():
                 
         #remove_empty(copies_repository, registre) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
         remove_forbidden_chars(copies_repository, reports, registre)
-        droid_check(repository, registre)
+        droid_check(copies_repository, reports, registre)
         write_report("events_report.txt", reports, type="event", cible=registre)
         while True:
             try:
