@@ -1,8 +1,7 @@
 import uuid
 from dataclasses import dataclass, field
-from itertools import count
 from vocabularies import *
-from typing import List
+from typing import List, Dict
 #PREMIS metadata originated from https://www.loc.gov/standards/premis/v3/premis-hierarchical-3-0.html
 
 @dataclass(frozen=True)
@@ -122,8 +121,15 @@ class State:
     stats : str | None = None
     files_number : int | None = None
     repositories_number : int | None = None
-    last_mod : str | None = None
-    list_dir : dict[str] = field(default_factory=dict)
+    oldest_created_file : str | None = None
+    oldest_created_time : str | None = None
+    most_recent_created_file : str | None = None
+    most_recent_created_time : str | None = None
+    oldest_modified_file : str | None = None
+    oldest_modified_time : str | None = None
+    most_recent_modified_file: str | None = None  
+    most_recent_modified_time:str | None = None
+    list_dir : Dict[str, Dict[str, List[str]]] = field(default_factory=dict)
 """
 Object basé sur Object dans Premis
 """

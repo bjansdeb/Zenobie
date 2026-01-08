@@ -28,6 +28,9 @@ def main():
             raise("Please select a directory and retry")
         except ValueError:
             raise ("Repertory not valid, retry") 
+        except FileNotFoundError:
+            raise("The indicated path is not correct, retry")
+
 
     originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name, registre)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
@@ -54,7 +57,7 @@ def main():
                 
         #remove_empty(copies_repository, registre) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
         remove_forbidden_chars(copies_repository, reports, registre)
-        #droid_check(copies_repository, reports, registre)
+        droid_check(copies_repository, reports, registre)
         write_report("events_report.txt", reports, type="event", cible=registre)
         while True:
             try:

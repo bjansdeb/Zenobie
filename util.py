@@ -164,11 +164,9 @@ def state_of_art(rep, reports, us, registre):
     full_size = 0 
     files_number, repositories_number = 0, 0
     stats = os.stat(rep)
-    creation_d = ""
-    modification_d = ""
     state_report = State(rep, us.agentName, us.note, date=horodatage())
     tree = {}
-
+    all_paths = [] #pour calculer le plus anciens/récents
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
@@ -179,19 +177,36 @@ def state_of_art(rep, reports, us, registre):
             "files": files
         }
         for file in files:
-            fp = os.path.join(root, file)
-            creation_d = datetime.datetime.fromtimestamp(os.path.getctime(fp))
-            modification_d = datetime.datetime.fromtimestamp(os.path.getmtime(fp))              
+            fp = os.path.join(root, file)        
             full_size += os.path.getsize(fp)
             files_number += 1
+            all_paths.append(fp)
+
+    if all_paths:
+        oldest_created_f = min(all_paths, key= os.path.getctime)
+        oldest_ct = str(datetime.datetime.fromtimestamp(os.path.getctime(oldest_created_f)))
+        most_recent_created_f = max(all_paths, key=os.path.getctime)
+        most_rct = str(datetime.datetime.fromtimestamp(os.path.getctime(most_recent_created_f)))
+        oldest_modified_f = min(all_paths, key= os.path.getmtime)
+        oldest_mt = str(datetime.datetime.fromtimestamp(os.path.getctime(oldest_modified_f)))
+        most_recent_modified_f = max(all_paths, key= os.path.getmtime)
+        most_rmt = str(datetime.datetime.fromtimestamp(os.path.getctime(most_recent_modified_f)))
 
     state_report.full_size=full_size
     state_report.stats = stats
     state_report.repositories_number= repositories_number
     state_report.files_number=files_number
-    state_report.last_mod = modification_d
+    state_report.oldest_created_file = oldest_created_f
+    state_report.oldest_created_time = oldest_ct
+    state_report.most_recent_created_file =most_recent_created_f
+    state_report.most_recent_created_time= most_rct
+    state_report.oldest_modified_file = oldest_modified_f
+    state_report.oldest_modified_time = oldest_mt
+    state_report.most_recent_modified_file = most_recent_modified_f
+    state_report.most_recent_modified_time = most_rmt
     state_report.list_dir = tree
     state_report.depth = max_depth
+    registre.add_event(Event(eventType="appraisal", eventDateTime=horodatage(), eventDetail= state_report, eventOutcome="success"))
     write_report("initial_audit_report.txt", reports, "state", cible= state_report)
 
 """Décompression des fichiers"""
@@ -291,9 +306,13 @@ def write_report(file_name, path, type, cible= None):
                 state_r.write(f"\nStats : {cible.stats}")
                 state_r.write(f"\nNumber of files : {cible.files_number}")
                 state_r.write(f"\nNumber of repositories : {cible.repositories_number}")
-                state_r.write(f"\nOldest file : {cible.last_mod}")
+                state_r.write("\n*Please, note that the indicated dates depend on the operating system and may considerably changed from a system to another*")
+                state_r.write(f"\nOldest created file : {cible.oldest_created_file} at {cible.oldest_created_time}")
+                state_r.write(f"\nMost recent created file : {cible.most_recent_created_file} at {cible.most_recent_created_time}")
+                state_r.write(f"\nOldest modified file : {cible.oldest_modified_file} at {cible.oldest_modified_time}")
+                state_r.write(f"\nMost recent modified file : {cible.most_recent_modified_file} at {cible.most_recent_modified_time}")                
                 state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
-                state_r.write(f"\nContenu:")
+                state_r.write(f"\nContent:")
                 for path, content in cible.list_dir.items():
                     state_r.write(f"\n {path}\n")
 
@@ -308,6 +327,7 @@ def write_report(file_name, path, type, cible= None):
             with open(file, "w+t", encoding="utf-8") as event_r:
                 event_r.write(f"\nEvents report")
                 for event in cible.events.values():
+                    event_r.write("\n----------------\n")
                     event_r.write(f"\nEvent: {event.eventType}")
                     event_r.write(f"\nEvent id type: {event.eventIdentifierType}")
                     event_r.write(f"\nEvent id: {event.eventIdentifierValue}")
