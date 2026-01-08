@@ -150,6 +150,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
             event.add_linking_object(obj, "outcome")
             registre.add_event(event)           
         else:
+            old_location = obj.contentLocationValue
             event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="failure", eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue} has failed")
             obj.add_linking_event(event)
             event.add_linking_object(obj, "outcome")
@@ -160,15 +161,38 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
     start_depth = 1
-    full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
-    date = horodatage() #horodatage du rapport
+    full_size = 0 
+    files_number, repositories_number = 0, 0
     stats = os.stat(rep)
+    creation_d = ""
+    modification_d = ""
+    state_report = State(rep, us.agentName, us.note, date=horodatage())
+    tree = {}
+
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
+        repositories_number += 1
+        
+        tree[root] = {
+            "dirs": dirs,
+            "files": files
+        }
+        for file in files:
+            fp = os.path.join(root, file)
+            creation_d = datetime.datetime.fromtimestamp(os.path.getctime(fp))
+            modification_d = datetime.datetime.fromtimestamp(os.path.getmtime(fp))              
+            full_size += os.path.getsize(fp)
+            files_number += 1
 
-    state_report = State(rep, us.agentName, us.note, full_size, date, max_depth, stats)
-    write_report("audit_report.txt", reports, "state", cible= state_report)
+    state_report.full_size=full_size
+    state_report.stats = stats
+    state_report.repositories_number= repositories_number
+    state_report.files_number=files_number
+    state_report.last_mod = modification_d
+    state_report.list_dir = tree
+    state_report.depth = max_depth
+    write_report("initial_audit_report.txt", reports, "state", cible= state_report)
 
 """Décompression des fichiers"""
 def dezip(copies_rep, registre):
@@ -247,7 +271,7 @@ def write_report(file_name, path, type, cible= None):
     file = os.path.join(path, file_name)
     match type:
         case "droid":
-            with open(file, "w+t") as droid_r:
+            with open(file, "w+t", encoding="utf-8") as droid_r:
                 droid_r.write("Droid identification report")
                 droid_r.write(f"{cible.stdout}")
         case "hash":
@@ -260,16 +284,28 @@ def write_report(file_name, path, type, cible= None):
             print(f"Hash report done, see {file}")
 
         case "state":           
-            with open(file, "w+t") as state_r:
+            with open(file, "w+t", encoding="utf-8") as state_r:
                 state_r.write(f"Audit of {cible.title}")
-                state_r.write(f"\nSize of the repository" + cible.full_size + " bytes")
+                state_r.write(f"\nSize of the repository :{cible.full_size} bytes")
                 state_r.write(f"\nMax-depth: {cible.depth}")
                 state_r.write(f"\nStats : {cible.stats}")
+                state_r.write(f"\nNumber of files : {cible.files_number}")
+                state_r.write(f"\nNumber of repositories : {cible.repositories_number}")
+                state_r.write(f"\nOldest file : {cible.last_mod}")
                 state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
+                state_r.write(f"\nContenu:")
+                for path, content in cible.list_dir.items():
+                    state_r.write(f"\n {path}\n")
+
+                    for d in content["dirs"]:
+                        state_r.write(f"   |── {d}/\n")
+
+                    for f in content["files"]:
+                        state_r.write(f"   |── {f}\n")
             print(f"Audit done, see {file}")
  
         case "event":
-            with open(file, "w+t") as event_r:
+            with open(file, "w+t", encoding="utf-8") as event_r:
                 event_r.write(f"\nEvents report")
                 for event in cible.events.values():
                     event_r.write(f"\nEvent: {event.eventType}")
@@ -282,7 +318,7 @@ def write_report(file_name, path, type, cible= None):
             print(f"Events report done, see {file}")
         
         case "transfer":
-            with open(file, "w+t") as transf_r:
+            with open(file, "w+t", encoding="utf-8") as transf_r:
                 transf_r.write(f"Transfert report")
                 for event in cible.events.values():
                     if event.eventType == "transfer":
@@ -295,7 +331,7 @@ def write_report(file_name, path, type, cible= None):
             print(f"Transfer report done, see {file}")
 
         case "rename":
-            with open(file, "w+t") as rename_r:
+            with open(file, "w+t", encoding="utf-8") as rename_r:
                 for event in cible.events.values():
                     if event.eventType == "filename change":
                         rename_r.write(f"\nEvent id type: {event.eventIdentifierType}")

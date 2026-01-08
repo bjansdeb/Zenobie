@@ -54,7 +54,7 @@ def main():
                 
         #remove_empty(copies_repository, registre) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
         remove_forbidden_chars(copies_repository, reports, registre)
-        droid_check(copies_repository, reports, registre)
+        #droid_check(copies_repository, reports, registre)
         write_report("events_report.txt", reports, type="event", cible=registre)
         while True:
             try:

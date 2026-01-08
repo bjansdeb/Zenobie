@@ -116,11 +116,14 @@ class State:
     title : str
     author : str
     role : str | None = None
-    full_size : str | None = None
+    full_size : int | None = None
     date : str | None = None
     depth : str | None = None
     stats : str | None = None
-
+    files_number : int | None = None
+    repositories_number : int | None = None
+    last_mod : str | None = None
+    list_dir : dict[str] = field(default_factory=dict)
 """
 Object basé sur Object dans Premis
 """
