@@ -55,7 +55,7 @@ def main():
             except EmptyError:
                 print("Please, answeer yes or no")
                 
-        #remove_empty(copies_repository, registre) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
+        remove_empty(copies_repository, reports, registre) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
         remove_forbidden_chars(copies_repository, reports, registre)
         droid_check(copies_repository, reports, registre)
         write_report("events_report.txt", reports, type="event", cible=registre)
@@ -65,7 +65,7 @@ def main():
                 if sys.exit():
                     raise KeyboardInterrupt
             except KeyboardInterrupt:
-                print("script closed")
+                print("\nscript closed")
                 sys.exit()
     else :
         print("Path not correct, retry please")

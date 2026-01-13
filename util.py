@@ -232,12 +232,13 @@ def droid_check(rep, reports, registre):
     write_report("droid_report.txt", reports, "droid", result)
 
 """Suppression de dossiers vides"""
-def remove_empty(copies_rep, registre):
+def remove_empty(copies_rep, report_r, registre):
     for root, dirs, files in os.walk(copies_rep):
         bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
         if bytes == 0:
             print(root) #ajouter un tableau ou un rapport reprenant tous les dossiers vides et demande de confirmation avant de supprimer
             os.rmdir(root)
+            registre.add_event(Event(eventType="deletion", eventDateTime=horodatage(), eventDetail=f"{root} was empty and has been removed"))
     print("Empty repertory removed")
 
 def remove_forbidden_chars(rep, report_r, registre):
