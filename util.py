@@ -1,6 +1,7 @@
 import csv
 import datetime 
 import hashlib
+import logging
 import os
 import re 
 import subprocess
@@ -11,12 +12,27 @@ from models import Event, PremisObjects, State, File
 
 
 """-----------------------------------------------"""
-"""            **** Functions   ****"""
+"""            **** Admin   ****                  """
+"""-----------------------------------------------"""
+logger = logging.getLogger(__name__)
+console_handler = logging.StreamHandler()
+file_handler = logging.FileHandler("app.log", mode="w", encoding="utf-8")
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+logger.setLevel("DEBUG")
+formatter = logging.Formatter("{name} - {asctime} - {levelname} : {message}", style="{", datefmt="%Y-%m-%d %H:%M")
+console_handler.setFormatter(formatter)
+
+
+
+"""-----------------------------------------------"""
+"""            **** Functions   ****              """
 """-----------------------------------------------"""
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
 def create_bay(user, project_n, registre):
+    logger.info("Creating bay...")
     parent_dir = os.path.dirname(__file__)
     filename, file_extension = os.path.splitext(project_n)  
     project = os.path.join(parent_dir, filename + "_project") #ajoute un dossier de projet avec le nom du fonds d'origine
@@ -24,7 +40,7 @@ def create_bay(user, project_n, registre):
 
     """Création du projet si inexistant"""
     if os.path.isdir(project):
-         print("Unload bay already exists")
+         logger.warning("Unload bay already exists")
          while True :
             try:
                 answeer = input("Warning, this project already exists. Do you want continue(yes/no) ? If 'no' you will exit the program:").lstrip().lower()       
@@ -42,55 +58,55 @@ def create_bay(user, project_n, registre):
 
     """Création de la baie si inexistant"""
     if os.path.isdir(unload_bay):
-         print("Unload bay already exists")       
+         logger.info("Unload bay already exists")       
     else : 
         os.mkdir(unload_bay)
 
     original_rep = "original_room"
     originals = os.path.join(unload_bay, original_rep)
     if os.path.isdir(originals):
-        print("Originals repository already exists")
+        logger.warning("Originals repository already exists")
     else :
         os.mkdir(originals)
-        print("Originals repository created")
+        logger.info("Originals repository created")
     
     copies_rep = "sorting_room"
     copies = os.path.join(unload_bay, copies_rep)
     if os.path.isdir(copies):
-        print("Copies repository already exists")
+        logger.warning("Copies repository already exists")
     else :
         os.mkdir(copies)
-        print("Copies repository created")
+        logger.info("Copies repository created")
 
     report_rep = "reports"
     reports = os.path.join(unload_bay, report_rep)
     if os.path.isdir(reports):
-        print("Reports repository already exists")
+        logger.warning("Reports repository already exists")
     else :
         os.mkdir(reports)
-        print("Reports repository created")
+        logger.info("Reports repository created")
 
     project_or = os.path.join(originals, project_n)
     if os.path.isdir(project_or):
-        print("Project original repository already exists")
+        logger.warning("Project original repository already exists")
     else :
         os.mkdir(project_or)
-        print("Project original repository created")
+        logger.info("Project original repository created")
 
     project_cop = os.path.join(copies, project_n)
     if os.path.isdir(project_cop):
-        print("Project copies repository already exists")
+        logger.warning("Project copies repository already exists")
     else :
         os.mkdir(project_cop)
-        print("Project copies repository created")
+        logger.info("Project copies repository created")
     
     """Création d'un dossier reports avec un sous-dossier 'reports'"""
     reports_project = os.path.join(reports, project_n)
     if os.path.isdir(reports_project):
-        print("Reports sub repository already exists")
+        logger.warning("Reports sub repository already exists")
     else :
         os.mkdir(reports_project)
-        print("Reports sub repository created")
+        logger.info("Reports sub repository created")
     
     return project_or, project_cop, unload_bay, reports_project
 
@@ -155,11 +171,12 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
             obj.add_linking_event(event)
             event.add_linking_object(obj, "outcome")
             registre.add_event(event)    
-            print(f"warning, this object {obj} has a problematic check")
+            logger.warning(f"warning, this object {obj} has a problematic check")
     write_report("moving_report.txt", report_r, "transfer", cible=registre )
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
+    logger.info("Start of the audit of the files")
     start_depth = 1
     full_size = 0 
     files_number, repositories_number = 0, 0
@@ -217,7 +234,7 @@ def dezip(copies_rep, registre):
             if zipfile.is_zipfile(f):
                 with zipfile.ZipFile(f, "r") as zip:
                     zip.extractall(root)
-                    print("dezip done")
+                    logger.info("dezip done")
                     registre.add_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}", eventDateTime=horodatage()))
                     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
 
@@ -239,9 +256,10 @@ def remove_empty(copies_rep, report_r, registre):
             print(root) #ajouter un tableau ou un rapport reprenant tous les dossiers vides et demande de confirmation avant de supprimer
             os.rmdir(root)
             registre.add_event(Event(eventType="deletion", eventDateTime=horodatage(), eventDetail=f"{root} was empty and has been removed"))
-    print("Empty repertory removed")
+    logger.info("Empty repertory removed")
 
 def remove_forbidden_chars(rep, report_r, registre):
+
     #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
     for root, dirs, files in os.walk(rep):
         for file in files:
@@ -297,7 +315,7 @@ def write_report(file_name, path, type, cible= None):
                 writer.writeheader()
                 for object in cible.objects.values() :
                     writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
-            print(f"Hash report done, see {file}")
+            logger.info(f"Hash report done, see {file}")
 
         case "state":           
             with open(file, "w+t", encoding="utf-8") as state_r:
@@ -322,7 +340,7 @@ def write_report(file_name, path, type, cible= None):
 
                     for f in content["files"]:
                         state_r.write(f"   |── {f}\n")
-            print(f"Audit done, see {file}")
+            logger.info(f"Audit done, see {file}")
  
         case "event":
             with open(file, "w+t", encoding="utf-8") as event_r:
@@ -336,7 +354,7 @@ def write_report(file_name, path, type, cible= None):
                     event_r.write(f"\nEvent detail: {event.eventDetail}")
                     for items in event.linkingObjectIdentifier :
                         event_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue} ")
-            print(f"Events report done, see {file}")
+            logger.info(f"Events report done, see {file}")
         
         case "transfer":
             with open(file, "w+t", encoding="utf-8") as transf_r:
@@ -349,7 +367,7 @@ def write_report(file_name, path, type, cible= None):
                         transf_r.write(f"\nEvent detail: {event.eventDetail}")
                         for items in event.linkingObjectIdentifier:
                             transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
-            print(f"Transfer report done, see {file}")
+            logger.info(f"Transfer report done, see {file}")
 
         case "rename":
             with open(file, "w+t", encoding="utf-8") as rename_r:
@@ -360,4 +378,4 @@ def write_report(file_name, path, type, cible= None):
                         for items in event.linkingObjectIdentifier:
                             transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
 
-            print(f"Rename report done, see {file}")
+            logger.info(f"Rename report done, see {file}")
