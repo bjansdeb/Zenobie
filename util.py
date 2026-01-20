@@ -26,7 +26,7 @@ console_handler.setFormatter(formatter)
 
 
 """-----------------------------------------------"""
-"""            **** Functions   ****              """
+"""            **** Functions principales  ****   """
 """-----------------------------------------------"""
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
@@ -245,18 +245,37 @@ def droid_check(rep, reports, registre):
     #"NAME","PUID"
     #"file.jpg","fmt/1507"
     """"""
-    result = subprocess.run(["droid.bat", "-a", rep, "-R"], text=True, capture_output=True, check=True)
-    write_report("droid_report.txt", reports, "droid", result)
+    if os.path.isfile("droid.bat"):
+        result = subprocess.run(["droid.bat", "-a", rep, "-R"], text=True, capture_output=True, check=True)
+        write_report("droid_report.txt", reports, "droid", result)
+    else :
+        logger.error("droid check has failed because droid.bat is not present on the Zenobie repository. Please install it and retry")
 
 """Suppression de dossiers vides"""
 def remove_empty(copies_rep, report_r, registre):
-    for root, dirs, files in os.walk(copies_rep):
-        bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
-        if bytes == 0:
-            print(root) #ajouter un tableau ou un rapport reprenant tous les dossiers vides et demande de confirmation avant de supprimer
-            os.rmdir(root)
-            registre.add_event(Event(eventType="deletion", eventDateTime=horodatage(), eventDetail=f"{root} was empty and has been removed"))
-    logger.info("Empty repertory removed")
+    #peut-être penser à inclure un dry run
+    logger.info("Removing empty repositories has started")
+    abs_path = os.path.abspath(copies_rep) #abspath retourne le chemin absolu exact de l'objet, utile pour vérifier des paths relatifs
+    if not os.path.isdir(abs_path):
+        raise ValueError(f"Directory does not exist: {abs_path}")
+    elif is_dangerous_root(abs_path): 
+        raise ValueError(f"Dangerous path refused: {abs_path}")
+    logger.info(f"Zenobie has checked {abs_path} before the removing process. The path is secure")
+
+    removed = 0 
+    initial_root = abs_path
+    for root, dirs, files in os.walk(abs_path, topdown=False):
+        try:
+            if root == initial_root:
+                continue
+            if not os.listdir(root):
+                os.rmdir(root) 
+                logging.info(f"Removed: {root}")
+                registre.add_event(Event(eventType="deletion", eventDateTime=horodatage(), eventDetail=f"{root} was empty and has been removed"))
+                removed += 1
+        except Exception as e:
+            logging.error(f"Error on {root}: {e}")         
+    logger.info(f"Removing process done. Zenovie has removed {removed} empty repositories")
 
 def remove_forbidden_chars(rep, report_r, registre):
 
@@ -273,7 +292,12 @@ def remove_forbidden_chars(rep, report_r, registre):
             os.rename(f, corrected_f)
             registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name: {corrected_file_n}"))
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
-    
+
+
+"""-----------------------------------------------"""
+"""            **** Functions secondaires  ****   """
+"""-----------------------------------------------"""
+
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
@@ -292,6 +316,28 @@ def hash_calculator(source):
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
+
+def is_dangerous_root(path):
+    path = os.path.abspath(path)
+
+    # si le chemin absolu indiqué correspond à la racine du système
+    if os.path.abspath(path) == os.path.abspath(os.sep):
+        return True
+
+    # vérifie si le chemin donné n'est pas D:/, C:/, etc...
+    if os.name == "nt":
+        drive, tail = os.path.splitdrive(path)
+        if path == drive + os.sep:
+            return True
+
+    home = os.path.abspath(os.path.expanduser("~"))
+    try:
+        if os.path.samefile(path, home):
+            return True
+    except FileNotFoundError:
+        pass
+
+    return False
 
 def write_report(file_name, path, type, cible= None):
     """

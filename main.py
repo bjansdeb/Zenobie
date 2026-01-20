@@ -41,35 +41,57 @@ def main():
                     copies_repository, unload_bay, reports, user, registre) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
     if os.path.isdir(copies_repository):
         state_of_art(repository, reports, user, registre)
-        while True:
-            try:
-                answeer = str(input("May I dezip repositories(yes/no)?")).lstrip().lower()
-                if answeer == "yes":
-                    dezip(copies_repository, registre)
-                    break
-                elif answeer == "no":
-                    print("ok, we continue without dezipping repositories")
-                    break
-                else :
-                    raise EmptyError            
-            except EmptyError:
-                print("Please, answeer yes or no")
-                
-        remove_empty(copies_repository, reports, registre) #s'en occuper plus tard, nécessite de lui préciser de continuer si le répertoire n'est pas vide
-        remove_forbidden_chars(copies_repository, reports, registre)
-        droid_check(copies_repository, reports, registre)
-        write_report("events_report.txt", reports, type="event", cible=registre)
-        while True:
-            try:
-                input(f"Process successfully finished {user.agentName}, do ctrl+c to quit the program")
-                if sys.exit():
-                    raise KeyboardInterrupt
-            except KeyboardInterrupt:
-                print("\nscript closed")
-                sys.exit()
     else :
         print("Path not correct, retry please")
         pass
+
+    while True:
+        try:
+            answeer = str(input("May I dezip repositories(yes/no)?")).lstrip().lower()
+            if answeer == "yes":
+                dezip(copies_repository, registre)
+                break
+            elif answeer == "no":
+                print("ok, we continue without dezipping repositories")
+                break
+            else :
+                raise EmptyError            
+        except EmptyError:
+            print("Please, answeer by yes or no")
+    while True:
+        try:
+            answeer = str(input("May I scan and remove empty repositories(yes/no)?")).lstrip().lower()
+            if answeer == "yes":
+                remove_empty(copies_repository, reports, registre)
+                break
+            elif answeer == "no":
+                print("ok, we continue without removing the empty repositories")
+                break
+        except EmptyError:
+            print("Please, answeer by yes or no ")
+    while True:
+        try: 
+            answeer = str(input("Ok, now let's take a look to the forbidden chars. May I scan and removing them (yes/no)?")).lstrip().lower()
+            if answeer == "yes":
+                remove_forbidden_chars(copies_repository, reports, registre)
+                break
+            elif answeer == "no":
+                print("ok, we continue without removing the empty repositories")
+                break                    
+        except EmptyError:
+            print("Please, answeer by yes or no ")  
+
+    droid_check(copies_repository, reports, registre)
+    write_report("events_report.txt", reports, type="event", cible=registre)
+    while True:
+        try:
+            input(f"Process successfully finished {user.agentName}, do ctrl+c to quit the program")
+            if sys.exit():
+                raise KeyboardInterrupt
+        except KeyboardInterrupt:
+            print("\nscript closed")
+            sys.exit()
+
 
 
 

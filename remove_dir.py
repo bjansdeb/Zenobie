@@ -17,17 +17,28 @@ def main():
 
 
 def remove_empty(copies_rep):
+    #peut-être penser à inclure un dry run
+    logger.info("Removing empty repositories has started")
     abs_path = os.path.abspath(copies_rep) #abspath retourne le chemin absolu exact de l'objet, utile pour vérifier des paths relatifs
     if not os.path.isdir(abs_path):
         raise ValueError(f"Directory does not exist: {abs_path}")
     elif is_dangerous_root(abs_path): 
         raise ValueError(f"Dangerous path refused: {abs_path}")
+    logger.info(f"Zenobie has checked {abs_path} before the removing process. The path is secure")
 
+    removed = 0 
+    initial_root = abs_path
     for root, dirs, files in os.walk(abs_path, topdown=False):
-        if len(os.listdir(root)) == 0:
-            print(len(os.listdir(root)), root)
-                # os.rmdir(root)
-
+        try:
+            if root == initial_root:
+                continue
+            if not os.listdir(root):
+                os.rmdir(root) 
+                logging.info(f"Removed: {root}")            
+                removed += 1
+        except Exception as e:
+            logging.error(f"Error on {root}: {e}")         
+    logger.info(f"Removing process done. Zenovie has removed {removed} empty repositories")
 
 def is_dangerous_root(path):
     path = os.path.abspath(path)
@@ -36,13 +47,12 @@ def is_dangerous_root(path):
     if os.path.abspath(path) == os.path.abspath(os.sep):
         return True
 
-    # Windows drive root
+    # vérifie si le chemin donné n'est pas D:/, C:/, etc...
     if os.name == "nt":
         drive, tail = os.path.splitdrive(path)
         if path == drive + os.sep:
             return True
 
-    # User home
     home = os.path.abspath(os.path.expanduser("~"))
     try:
         if os.path.samefile(path, home):
