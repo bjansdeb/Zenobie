@@ -1,6 +1,7 @@
 import os
 import sys
 from errors import EmptyError
+from log import log_it
 from models import Agent, Event, Object, Report, Mets, PremisObjects, State
 from util import create_bay, create_objects, sail_to_bay, state_of_art, dezip, droid_check, remove_empty, remove_forbidden_chars, write_report, horodatage
 
@@ -8,7 +9,7 @@ from util import create_bay, create_objects, sail_to_bay, state_of_art, dezip, d
 
 def main():
     
-    print("Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
+    log_it("info", "Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
     name = str(input("What's your name : "))
     role = str(input(f"Hello {name}. What's your role at Carhif: "))
     user = Agent (agentName=name, agentType=None, note=role)
@@ -42,7 +43,7 @@ def main():
     if os.path.isdir(copies_repository):
         state_of_art(repository, reports, user, registre)
     else :
-        print("Path not correct, retry please")
+        log_it("warning","Path not correct, retry please")
         pass
 
     while True:
@@ -52,12 +53,12 @@ def main():
                 dezip(copies_repository, registre)
                 break
             elif answeer == "no":
-                print("ok, we continue without dezipping repositories")
+                log_it("info", "ok, we continue without dezipping repositories")
                 break
             else :
                 raise EmptyError            
         except EmptyError:
-            print("Please, answeer by yes or no")
+            log_it("warnin","Please, answeer by yes or no")
     while True:
         try:
             answeer = str(input("May I scan and remove empty repositories(yes/no)?")).lstrip().lower()
@@ -65,10 +66,10 @@ def main():
                 remove_empty(copies_repository, reports, registre)
                 break
             elif answeer == "no":
-                print("ok, we continue without removing the empty repositories")
+                log_it("info","ok, we continue without removing the empty repositories")
                 break
         except EmptyError:
-            print("Please, answeer by yes or no ")
+            log_it("warning","Please, answeer by yes or no ")
     while True:
         try: 
             answeer = str(input("Ok, now let's take a look to the forbidden chars. May I scan and removing them (yes/no)?")).lstrip().lower()
@@ -76,10 +77,10 @@ def main():
                 remove_forbidden_chars(copies_repository, reports, registre)
                 break
             elif answeer == "no":
-                print("ok, we continue without removing the empty repositories")
+                log_it("info","ok, we continue without removing the empty repositories")
                 break                    
         except EmptyError:
-            print("Please, answeer by yes or no ")  
+            log_it("warning","Please, answeer by yes or no ")  
 
     droid_check(copies_repository, reports, registre)
     write_report("events_report.txt", reports, type="event", cible=registre)
