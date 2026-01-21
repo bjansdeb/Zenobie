@@ -163,7 +163,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
-    log_it("info","Start of the audit of the files")
+    log_it("info","Start of the files audit")
     start_depth = 1
     full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
     date = horodatage() #horodatage du rapport
