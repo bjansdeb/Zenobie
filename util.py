@@ -1,4 +1,4 @@
-import csv
+
 import datetime 
 import hashlib
 import os
@@ -7,16 +7,19 @@ import subprocess
 import sys
 import zipfile
 from errors import EmptyError
+from log import log_it
+from reporting import write_report
 from models import Event, PremisObjects, State, File
 
 
 """-----------------------------------------------"""
-"""            **** Functions   ****"""
+"""            **** Functions principales  ****   """
 """-----------------------------------------------"""
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
 def create_bay(user, project_n, registre):
+    log_it("info","Creating bay...")
     parent_dir = os.path.dirname(__file__)
     filename, file_extension = os.path.splitext(project_n)  
     project = os.path.join(parent_dir, filename + "_project") #ajoute un dossier de projet avec le nom du fonds d'origine
@@ -24,7 +27,7 @@ def create_bay(user, project_n, registre):
 
     """Création du projet si inexistant"""
     if os.path.isdir(project):
-         print("Unload bay already exists")
+         log_it("warning","Unload bay already exists")
          while True :
             try:
                 answeer = input("Warning, this project already exists. Do you want continue(yes/no) ? If 'no' you will exit the program:").lstrip().lower()       
@@ -42,55 +45,55 @@ def create_bay(user, project_n, registre):
 
     """Création de la baie si inexistant"""
     if os.path.isdir(unload_bay):
-         print("Unload bay already exists")       
+         log_it("info","Unload bay already exists")       
     else : 
         os.mkdir(unload_bay)
 
     original_rep = "original_room"
     originals = os.path.join(unload_bay, original_rep)
     if os.path.isdir(originals):
-        print("Originals repository already exists")
+        log_it("warning","Originals repository already exists")
     else :
         os.mkdir(originals)
-        print("Originals repository created")
+        log_it("info", "Originals repository created")
     
     copies_rep = "sorting_room"
     copies = os.path.join(unload_bay, copies_rep)
     if os.path.isdir(copies):
-        print("Copies repository already exists")
+        log_it("warning","Copies repository already exists")
     else :
         os.mkdir(copies)
-        print("Copies repository created")
+        log_it("info","Copies repository created")
 
     report_rep = "reports"
     reports = os.path.join(unload_bay, report_rep)
     if os.path.isdir(reports):
-        print("Reports repository already exists")
+        log_it("warning","Reports repository already exists")
     else :
         os.mkdir(reports)
-        print("Reports repository created")
+        log_it("info","Reports repository created")
 
     project_or = os.path.join(originals, project_n)
     if os.path.isdir(project_or):
-        print("Project original repository already exists")
+        log_it("warning","Project original repository already exists")
     else :
         os.mkdir(project_or)
-        print("Project original repository created")
+        log_it("info","Project original repository created")
 
     project_cop = os.path.join(copies, project_n)
     if os.path.isdir(project_cop):
-        print("Project copies repository already exists")
+        log_it("warning","Project copies repository already exists")
     else :
         os.mkdir(project_cop)
-        print("Project copies repository created")
+        log_it("info","Project copies repository created")
     
     """Création d'un dossier reports avec un sous-dossier 'reports'"""
     reports_project = os.path.join(reports, project_n)
     if os.path.isdir(reports_project):
-        print("Reports sub repository already exists")
+        log_it("warning","Reports sub repository already exists")
     else :
         os.mkdir(reports_project)
-        print("Reports sub repository created")
+        log_it("info","Reports sub repository created")
     
     return project_or, project_cop, unload_bay, reports_project
 
@@ -155,11 +158,12 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
             obj.add_linking_event(event)
             event.add_linking_object(obj, "outcome")
             registre.add_event(event)    
-            print(f"warning, this object {obj} has a problematic check")
+            log_it("warning",f"warning, this object {obj} has a problematic check")
     write_report("moving_report.txt", report_r, "transfer", cible=registre )
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
+    log_it("info","Start of the audit of the files")
     start_depth = 1
     full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
     date = horodatage() #horodatage du rapport
@@ -208,6 +212,7 @@ def state_of_art(rep, reports, us, registre):
     state_report.depth = max_depth
     registre.add_event(Event(eventType="appraisal", eventDateTime=horodatage(), eventDetail= state_report, eventOutcome="success"))
     write_report("initial_audit_report.txt", reports, "state", cible= state_report)
+    log_it("info", "Audit succesly finished")
 
 """Décompression des fichiers"""
 def dezip(copies_rep, registre):
@@ -217,7 +222,7 @@ def dezip(copies_rep, registre):
             if zipfile.is_zipfile(f):
                 with zipfile.ZipFile(f, "r") as zip:
                     zip.extractall(root)
-                    print("dezip done")
+                    log_it("info","dezip done")
                     registre.add_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}", eventDateTime=horodatage()))
                     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
 
@@ -228,20 +233,40 @@ def droid_check(rep, reports, registre):
     #"NAME","PUID"
     #"file.jpg","fmt/1507"
     """"""
-    result = subprocess.run(["droid.bat", "-a", rep, "-R"], text=True, capture_output=True, check=True)
-    write_report("droid_report.txt", reports, "droid", result)
+    if os.path.isfile("droid.bat"):
+        result = subprocess.run(["/droid/droid.bat", "-a", rep, "-R"], text=True, capture_output=True, check=True)
+        write_report("droid_report.txt", reports, "droid", result)
+    else :
+        log_it("error","droid check has failed because droid.bat is not present on the Zenobie repository. Please install it and retry")
 
 """Suppression de dossiers vides"""
 def remove_empty(copies_rep, report_r, registre):
-    for root, dirs, files in os.walk(copies_rep):
-        bytes = sum(os.path.getsize(os.path.join(root, file)) for file in files)
-        if bytes == 0:
-            print(root) #ajouter un tableau ou un rapport reprenant tous les dossiers vides et demande de confirmation avant de supprimer
-            os.rmdir(root)
-            registre.add_event(Event(eventType="deletion", eventDateTime=horodatage(), eventDetail=f"{root} was empty and has been removed"))
-    print("Empty repertory removed")
+    #peut-être penser à inclure un dry run
+    log_it("info","Removing empty repositories has started")
+    abs_path = os.path.abspath(copies_rep) #abspath retourne le chemin absolu exact de l'objet, utile pour vérifier des paths relatifs
+    if not os.path.isdir(abs_path):
+        raise ValueError(f"Directory does not exist: {abs_path}")
+    elif is_dangerous_root(abs_path): 
+        raise ValueError(f"Dangerous path refused: {abs_path}")
+    log_it("info",f"Zenobie has checked {abs_path} before the removing process. The path is secure")
+
+    removed = 0 
+    initial_root = abs_path
+    for root, dirs, files in os.walk(abs_path, topdown=False):
+        try:
+            if root == initial_root:
+                continue
+            if not os.listdir(root):
+                os.rmdir(root) 
+                log_it("info",f"Removed: {root}")
+                registre.add_event(Event(eventType="deletion", eventDateTime=horodatage(), eventDetail=f"{root} was empty and has been removed"))
+                removed += 1
+        except Exception as e:
+            log_it("error",f"Error on {root}: {e}")         
+    log_it("info",f"Removing process done. Zenovie has removed {removed} empty repositories")
 
 def remove_forbidden_chars(rep, report_r, registre):
+
     #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
     for root, dirs, files in os.walk(rep):
         for file in files:
@@ -255,6 +280,11 @@ def remove_forbidden_chars(rep, report_r, registre):
             os.rename(f, corrected_f)
             registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name: {corrected_file_n}"))
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
+
+
+"""-----------------------------------------------"""
+"""            **** Functions secondaires  ****   """
+"""-----------------------------------------------"""
 
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
@@ -275,89 +305,25 @@ def hash_calculator(source):
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
 
-def write_report(file_name, path, type, cible= None):
-    """
-    Docstring for write_report
-    Function d'écriture des rapports
-    :param file_name: Nom du fichier
-    :param path: Emplacement
-    :param type: hash, state, event, transfer, rename
-    :param cible: objet sur lequel porte le rapport
-    """
-    file = os.path.join(path, file_name)
-    match type:
-        case "droid":
-            with open(file, "w+t", encoding="utf-8") as droid_r:
-                droid_r.write("Droid identification report")
-                droid_r.write(f"{cible.stdout}")
-        case "hash":
-            with open(file, 'w', newline='', encoding='utf-8') as f:
-                fieldnames = ['object_name', 'hash']
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                for object in cible.objects.values() :
-                    writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
-            print(f"Hash report done, see {file}")
+def is_dangerous_root(path):
+    path = os.path.abspath(path)
 
-        case "state":           
-            with open(file, "w+t", encoding="utf-8") as state_r:
-                state_r.write(f"Audit of {cible.title}")
-                state_r.write(f"\nSize of the repository :{cible.full_size} bytes")
-                state_r.write(f"\nMax-depth: {cible.depth}")
-                state_r.write(f"\nStats : {cible.stats}")
-                state_r.write(f"\nNumber of files : {cible.files_number}")
-                state_r.write(f"\nNumber of repositories : {cible.repositories_number}")
-                state_r.write("\n*Please, note that the indicated dates depend on the operating system and may considerably changed from a system to another*")
-                state_r.write(f"\nOldest created file : {cible.oldest_created_file} at {cible.oldest_created_time}")
-                state_r.write(f"\nMost recent created file : {cible.most_recent_created_file} at {cible.most_recent_created_time}")
-                state_r.write(f"\nOldest modified file : {cible.oldest_modified_file} at {cible.oldest_modified_time}")
-                state_r.write(f"\nMost recent modified file : {cible.most_recent_modified_file} at {cible.most_recent_modified_time}")                
-                state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
-                state_r.write(f"\nContent:")
-                for path, content in cible.list_dir.items():
-                    state_r.write(f"\n {path}\n")
+    # si le chemin absolu indiqué correspond à la racine du système
+    if os.path.abspath(path) == os.path.abspath(os.sep):
+        return True
 
-                    for d in content["dirs"]:
-                        state_r.write(f"   |── {d}/\n")
+    # vérifie si le chemin donné n'est pas D:/, C:/, etc...
+    if os.name == "nt":
+        drive, tail = os.path.splitdrive(path)
+        if path == drive + os.sep:
+            return True
 
-                    for f in content["files"]:
-                        state_r.write(f"   |── {f}\n")
-            print(f"Audit done, see {file}")
- 
-        case "event":
-            with open(file, "w+t", encoding="utf-8") as event_r:
-                event_r.write(f"\nEvents report")
-                for event in cible.events.values():
-                    event_r.write("\n----------------\n")
-                    event_r.write(f"\nEvent: {event.eventType}")
-                    event_r.write(f"\nEvent id type: {event.eventIdentifierType}")
-                    event_r.write(f"\nEvent id: {event.eventIdentifierValue}")
-                    event_r.write(f"\nEvent date time: {event.eventDateTime}")
-                    event_r.write(f"\nEvent detail: {event.eventDetail}")
-                    for items in event.linkingObjectIdentifier :
-                        event_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue} ")
-            print(f"Events report done, see {file}")
-        
-        case "transfer":
-            with open(file, "w+t", encoding="utf-8") as transf_r:
-                transf_r.write(f"Transfert report")
-                for event in cible.events.values():
-                    if event.eventType == "transfer":
-                        transf_r.write(f"\nEvent id type: {event.eventIdentifierType}")
-                        transf_r.write(f"\nEvent id: {event.eventIdentifierValue}")
-                        transf_r.write(f"\nEvent date time: {event.eventDateTime}")
-                        transf_r.write(f"\nEvent detail: {event.eventDetail}")
-                        for items in event.linkingObjectIdentifier:
-                            transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
-            print(f"Transfer report done, see {file}")
+    home = os.path.abspath(os.path.expanduser("~"))
+    try:
+        if os.path.samefile(path, home):
+            return True
+    except FileNotFoundError:
+        pass
 
-        case "rename":
-            with open(file, "w+t", encoding="utf-8") as rename_r:
-                for event in cible.events.values():
-                    if event.eventType == "filename change":
-                        rename_r.write(f"\nEvent id type: {event.eventIdentifierType}")
-                        rename_r.write(f"\nEvent detail: {event.eventDetail}")
-                        for items in event.linkingObjectIdentifier:
-                            transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
+    return False
 
-            print(f"Rename report done, see {file}")
