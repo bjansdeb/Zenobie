@@ -161,8 +161,8 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
     start_depth = 1
-    full_size = 0 
-    files_number, repositories_number = 0, 0
+    full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
+    date = horodatage() #horodatage du rapport
     stats = os.stat(rep)
     state_report = State(rep, us.agentName, us.note, date=horodatage())
     tree = {}
@@ -255,7 +255,7 @@ def remove_forbidden_chars(rep, report_r, registre):
             os.rename(f, corrected_f)
             registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name: {corrected_file_n}"))
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
-    
+
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
