@@ -2,6 +2,8 @@
 import os
 import re
 
+FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
+
 def main():
     path = str(input("path : "))
     remove_forbidden_chars(path)
@@ -9,43 +11,38 @@ def main():
 
 def remove_forbidden_chars(rep):
     #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
-    pattern = re.compile(r"[\@\]\[\.\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
     for root, dirs, files in os.walk(rep):
         for file in files:
-            corrected_f =""
-            f = os.path.join(root, file)
+            old_path = os.path.join(root, file)
             filename, file_extension = os.path.splitext(file) 
             if not filename:
-                corrected_name = "unnamed"
-                corrected_file_n = corrected_name + file_extension
-                corrected_f = os.path.join(root, corrected_file_n)
-                verify_collision(corrected_f, corrected_name, file_extension, root, f)
-            file_lowered = filename.lower()
-            if re.search(pattern, file_lowered):
-                print(file_lowered, "contains one or more problematic chars")
-                corrected_name = pattern.sub("-", file_lowered).replace(" ", "-")
-                corrected_file_n = corrected_name + file_extension
-                corrected_f = os.path.join(root, corrected_file_n)   
-                verify_collision(corrected_f, corrected_name, file_extension, root, f)      
+                filename = "unnamed"
+
+            if re.search(FORBIDDEN_CHARS, filename):
+                print(filename, "contains one or more problematic chars")
+                filename = FORBIDDEN_CHARS.sub("-", filename).replace(" ", "-")
+            
+            
+            new_filename = filename + file_extension
+            new_path = os.path.join(root, new_filename)   
+            if new_path == old_path:
+                continue
+
+            normalized_name = verify_collision(new_path)      
+            try:
+                os.rename(normalized_name, old_path)
+            except PermissionError:
+                raise("You don't have the permission to modify the file, please run again ")
 
 
-
-def verify_collision(c_f, c_n, f_e, r, path):
-    anti_collision = 0    
-    while True:
-        if os.path.exists(c_f):
-            print(f"attention, {c_f} entraîne une collision")
-            anti_collision +=1
-            corrected_file_n = c_n +"_" + str(anti_collision) + f_e
-            c_f = os.path.join(r, corrected_file_n)
-        else:
-            break
-    try:
-        os.rename(path, c_f)
-    except FileExistsError:
-        raise FileExistsError("The file already exists")
-    except PermissionError:
-        raise PermissionError("You don't have the permission to rename this file, please retry with running Zenobie with admin right")
+def verify_collision(n_path):
+    base, ext = os.path.splitext(n_path)
+    counter = 0    
+    while os.path.exists(base):
+            print(f"attention, {base} entraîne une collision")
+            counter +=1
+            candidate = f"{base}_{counter}{ext}"
+    return candidate
 
 
 if __name__ == "__main__":
