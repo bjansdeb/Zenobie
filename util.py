@@ -268,6 +268,7 @@ def remove_empty(copies_rep, report_r, registre):
     log_it("info",f"Removing process done. Zenovie has removed {removed} empty repositories")
 
 def remove_forbidden_chars(rep, report_r, registre):
+    log_it("info", "launch of forbidden chars removing")
     #peut-être penser à mettre un dry run
     for root, dirs, files in os.walk(rep):
         for file in files:
@@ -299,6 +300,7 @@ def remove_forbidden_chars(rep, report_r, registre):
                 raise OSError(f"Zenobie failed to rename {old_path}: {e}")
             
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
+    log_it("info", "removing of forbidden chars done")
 
 
 """-----------------------------------------------"""
