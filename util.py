@@ -12,6 +12,9 @@ from reporting import write_report
 from models import Event, PremisObjects, State, File
 
 
+FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
+
+
 """-----------------------------------------------"""
 """            **** Functions principales  ****   """
 """-----------------------------------------------"""
@@ -239,7 +242,6 @@ def droid_check(rep, reports, registre):
     else :
         log_it("error","droid check has failed because droid.bat is not present on the Zenobie repository. Please install it and retry")
 
-"""Suppression de dossiers vides"""
 def remove_empty(copies_rep, report_r, registre):
     #peut-être penser à inclure un dry run
     log_it("info","Removing empty repositories has started")
@@ -266,19 +268,36 @@ def remove_empty(copies_rep, report_r, registre):
     log_it("info",f"Removing process done. Zenovie has removed {removed} empty repositories")
 
 def remove_forbidden_chars(rep, report_r, registre):
-
-    #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
+    #peut-être penser à mettre un dry run
     for root, dirs, files in os.walk(rep):
         for file in files:
-            f = os.path.join(root, file)
-            filename, file_extension = os.path.splitext(file)  
-            file_lowered = filename.lower()
-            pattern = re.compile(r"[@\[\[\.<>:\"\'/\\|?*\x00-\x1F]")
-            corrected_name = pattern.sub("-", file_lowered).replace(" ", "-")
-            corrected_file_n = corrected_name + file_extension
-            corrected_f = os.path.join(root, corrected_file_n)
-            os.rename(f, corrected_f)
-            registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name: {corrected_file_n}"))
+            old_path = os.path.join(root, file)
+            filename, file_extension = os.path.splitext(file) 
+            if not filename:
+                filename = "unnamed"
+
+            if re.search(FORBIDDEN_CHARS, filename):
+                filename = FORBIDDEN_CHARS.sub("-", filename)
+            
+            filename = filename.replace(" .", ".")
+            filename = filename.replace(" ", "_")
+            new_filename = filename + file_extension
+            new_path = os.path.join(root, new_filename)
+            if new_path == old_path:
+                continue
+
+            normalized_name = verify_collision(new_path)      
+            try:
+                os.rename(old_path, normalized_name)
+                registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name: {normalized_name}"))
+
+            except FileExistsError:
+                raise FileExistsError("There is a collision between two files names")
+            except PermissionError:
+                raise PermissionError("You don't have the permission to modify the file, please run Zenobie again with ")
+            except OSError as e:
+                raise OSError(f"Zenobie failed to rename {old_path}: {e}")
+            
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
 
 
@@ -327,3 +346,11 @@ def is_dangerous_root(path):
 
     return False
 
+def verify_collision(n_path):
+    base, ext = os.path.splitext(n_path)
+    counter = 0
+    candidate = n_path
+    while os.path.exists(candidate):
+            counter +=1
+            candidate = f"{base}_{counter}{ext}"
+    return candidate

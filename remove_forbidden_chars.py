@@ -19,31 +19,33 @@ def remove_forbidden_chars(rep):
                 filename = "unnamed"
 
             if re.search(FORBIDDEN_CHARS, filename):
-                print(filename, "contains one or more problematic chars")
-                filename = FORBIDDEN_CHARS.sub("-", filename).replace(" ", "-")
+                filename = FORBIDDEN_CHARS.sub("-", filename)
             
-            
+            filename = filename.replace(" .", ".")
+            filename = filename.replace(" ", "_")
             new_filename = filename + file_extension
-            new_path = os.path.join(root, new_filename)   
+            new_path = os.path.join(root, new_filename)
             if new_path == old_path:
                 continue
 
             normalized_name = verify_collision(new_path)      
             try:
-                os.rename(normalized_name, old_path)
+                os.rename(old_path, normalized_name)
+            except FileExistsError:
+                raise FileExistsError("There is a collision between two files names")
             except PermissionError:
-                raise("You don't have the permission to modify the file, please run again ")
-
+                raise PermissionError("You don't have the permission to modify the file, please run Zenobie again with ")
+            except OSError as e:
+                raise OSError(f"Zenobie failed to rename {old_path}: {e}")
 
 def verify_collision(n_path):
     base, ext = os.path.splitext(n_path)
-    counter = 0    
-    while os.path.exists(base):
-            print(f"attention, {base} entraîne une collision")
+    counter = 0
+    candidate = n_path
+    while os.path.exists(candidate):
             counter +=1
             candidate = f"{base}_{counter}{ext}"
     return candidate
-
 
 if __name__ == "__main__":
     main()
