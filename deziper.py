@@ -19,24 +19,24 @@ def dezip(copies_rep):
             filename, file_extension = os.path.splitext(old_path)
             if file_extension.lower() not in AUTHORIZED_ZIP:
                 continue
+            new_path = old_path    
+            if os.path.isdir(filename):
+                new_path = verify_collision(filename)
+                print("new reposit created")
+
+            os.mkdir(new_path)
+            print(f"{new_path}  ")            
             match file_extension:
                 case ".zip":
-                    extract_zipfile(old_path, filename)
+                    extract_zipfile(old_path, new_path)
                 case ".tar":
-                    extact_tarfile(old_path, filename)
+                    extact_tarfile(old_path, new_path)
                 case ".rar":
                     ...
                 case ".7z":
                     ...
 
-def extract_zipfile(old_path, filename): 
-    new_path = old_path    
-    if os.path.isdir(filename):
-        new_path = verify_collision(filename)
-        print("new reposit created")
-
-    os.mkdir(new_path)
-    print(f"{new_path}  ")
+def extract_zipfile(old_path, new_path): 
     with zipfile.ZipFile(old_path, "r") as zip:
         compressed_size = 0
         files_number = 0
