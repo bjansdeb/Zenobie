@@ -1,12 +1,15 @@
 import os
+import py7zr
 import tarfile
 import zipfile
 import logging
-from typing import Path
+import typing 
+from pathlib import Path
 
-MAX_FILES = 10_000
+MAX_FILES = 1_000
 MAX_TOTAL_SIZE = 1_000_000_000
-AUTHORIZED_ZIP = {".zip", ".tar", ".rar", ".7z"}
+AUTHORIZED_ZIP = {".zip", ".tar", ".7z"}
+UNAUTHORIZED_ZIP = {".rar"}
 
 def main():
     path = input("Path :")
@@ -20,9 +23,17 @@ def dezip(copies_rep):
             filename, file_extension = os.path.splitext(old_path)
             if file_extension.lower() not in AUTHORIZED_ZIP:
                 continue
-            new_path = old_path    
+            if file_extension.lower() in UNAUTHORIZED_ZIP:
+                remove_zip(old_path)
+                continue
+
+            new_path = old_path
+            print("new", new_path, "old", old_path)
+
             if os.path.isdir(filename):
+                print(filename)
                 new_path = verify_collision(filename)
+                print(new_path)
                 print("new reposit created")
 
             os.mkdir(new_path)
@@ -34,10 +45,8 @@ def dezip(copies_rep):
                     extact_tarfile(old_path, new_path)
                 case ".gz":
                     extact_tarfile(old_path, new_path)
-                case ".rar":
-                    ...
                 case ".7z":
-                    ...
+                    extract_7zfile(old_path, new_path)
 
 def extract_zipfile(old_path, new_path): 
     with zipfile.ZipFile(old_path, "r") as zip:
@@ -80,10 +89,21 @@ def extact_tarfile(old_path, new_path):
             elif answeer=="no":
                 ...#continue 
         tar.extractall(new_path, filter="data")                   
-                
+
+def extract_7zfile(old_path):
+    with py7zr.SevenZipFile(old_path, 'r') as z:
+        compressed_zize = 0
+        files_number = 0
+        allfiles = z.getnames()
+        z_infos = z._get_fileinfo_sizes()
+        print(allfiles, z_infos)
+
+def remove_zip(old_path, new_path):
+    ...                
 
 def verify_collision(n_path):
     base, ext = os.path.splitext(n_path)
+    print("inside verify collision", base, ext)
     counter = 0
     candidate = n_path
     while os.path.exists(candidate):
