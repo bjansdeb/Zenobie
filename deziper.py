@@ -11,24 +11,27 @@ MAX_TOTAL_SIZE = 1_000_000_000
 AUTHORIZED_ZIP = {".zip", ".tar", ".7z"}
 UNAUTHORIZED_ZIP = {".rar"}
 
+
 def main():
     path = input("Path :")
     dezip(path)
 
 
 def dezip(copies_rep):
-     for root, dirs, files in os.walk(copies_rep):
+    uncompliant_files = []
+    for root, dirs, files in os.walk(copies_rep):
         for file in files :
             old_path = os.path.join(root, file)
             filename, file_extension = os.path.splitext(old_path)
 
+            if file_extension.lower() in UNAUTHORIZED_ZIP:
+                uncompliant_files.append(old_path)
+                continue
             if file_extension.lower() not in AUTHORIZED_ZIP:
                 continue
-            if file_extension.lower() in UNAUTHORIZED_ZIP:
-                remove_zip(old_path)
-                continue
 
-            new_path = old_path
+
+            new_path = filename
 
             if os.path.isdir(filename):
                 new_path = verify_collision(filename)
@@ -45,6 +48,21 @@ def dezip(copies_rep):
                     extact_tarfile(old_path, new_path)
                 case ".7z":
                     extract_7zfile(old_path, new_path)
+
+    if uncompliant_files :
+        logging.info(f"There are zip packages not compliant to your format policy.")
+        anwseer= input(f"May I remove them (yes/no)?")
+        while True :
+            if anwseer == "yes":
+                for file in uncompliant_files:
+                    remove_zip(file)
+                break
+            elif anwseer == "no":
+                break
+    else:
+        pass
+
+
 
 def extract_zipfile(old_path, new_path): 
     with zipfile.ZipFile(old_path, "r") as zip:
@@ -67,7 +85,7 @@ def extract_zipfile(old_path, new_path):
         logging.info(f"{new_path} extracted")
 
 def extact_tarfile(old_path, new_path):
-    with tarfile.open(old_path, 'r') as tar:
+    with tarfile.open(old_path, "r:*") as tar:
         compressed_size = 0
         files_number= 0
         members = tar.getmembers()
@@ -75,7 +93,7 @@ def extact_tarfile(old_path, new_path):
             if not entry.is_dir():
                 compressed_size += entry.file_size
                 files_number +=1
-            if not is_safe_path(entry):
+            if not is_safe_path(entry, entry.name):
                 return
         if compressed_size >= MAX_TOTAL_SIZE or files_number >= MAX_FILES:
             logging.warning(f"{new_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
@@ -97,7 +115,7 @@ def extract_7zfile(old_path, new_path):
         infos_package = z.archiveinfo()
 
         for entry in members:
-            if entry.is_file == True:
+            if entry.is_file :
                 files_number +=1
             path = os.path.join(old_path, entry.filename)
             print(path)
@@ -117,7 +135,7 @@ def extract_7zfile(old_path, new_path):
         logging.info(f"{new_path} extracted")
 
 def remove_zip(old_path):
-    ...                
+    os.remove(old_path)                
 
 def verify_collision(n_path):
     base, ext = os.path.splitext(n_path)
