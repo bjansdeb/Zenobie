@@ -10,7 +10,6 @@ def main():
 
 
 def remove_forbidden_chars(rep):
-    #à corriger pour n'obtenir que le nom de fichier sans l'extension, car bugue avec noms de fichier "nom_3.5.5.py"
     for root, dirs, files in os.walk(rep):
         for file in files:
             old_path = os.path.join(root, file)
