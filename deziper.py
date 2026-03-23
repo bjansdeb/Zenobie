@@ -1,9 +1,9 @@
 import os
 import py7zr
+import stat
 import tarfile
 import zipfile
 import logging
-import typing 
 from pathlib import Path
 
 
@@ -105,9 +105,14 @@ def extract_zipfile(old_path, new_path, uncomp_pack, exceed_pack):
                 uncomp_pack.append(old_path)
                 return
             
-            if os.path.is_link(entry):
+            """Détecte les symlinks en bas niveau, Python 3.11.19 n'offre pas de fonction pour ça avec zipfile"""
+            mode = entry.external_attr >> 16
+            print(mode)
+            
+            if stat.S_ISLNK(mode):
                 uncomp_pack.append(old_path)
                 return
+            print("external attributes", entry.external_attr)
             
         if compressed_size >= MAX_TOTAL_SIZE or files_number >= MAX_FILES:
             logging.warning(f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
@@ -147,7 +152,7 @@ def extact_tarfile(old_path, new_path, uncomp_pack, exceed_pack):
     remove_pack(old_path)
 
 
-def extract_7zfile(old_path, new_path, exceed_pack):
+def extract_7zfile(old_path, new_path, uncomp_pack, exceed_pack):
     with py7zr.SevenZipFile(old_path, 'r') as z:
         compressed_size = 0
         files_number = 0
@@ -159,10 +164,13 @@ def extract_7zfile(old_path, new_path, exceed_pack):
                 files_number +=1
 
             if not is_safe_path(old_path, entry.filename):
+                uncomp_pack.append(old_path)
                 return
 
             if entry.is_symlink:
-                return        
+                uncomp_pack.append(old_path)
+                return
+                    
         compressed_size = infos_package.uncompressed
         if compressed_size >= MAX_TOTAL_SIZE or files_number >= MAX_FILES:
             logging.warning(f"{new_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
