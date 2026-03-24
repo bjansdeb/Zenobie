@@ -88,3 +88,8 @@ def write_report(file_name, path, type, cible= None):
                             transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
 
             log_it("info",f"Rename report done, see {file}")
+        
+        # case "uncompliant_zip":
+        #     with open(file, "w+t", encoding="utf-8") as uncompliant_r:
+        #         for packs in uncompliants_packages:
+        #             uncompliant_r.write(f"\nEvent id type: {event.eventIdentifierType}")
