@@ -33,15 +33,6 @@ def dezip(copies_rep):
                 """let the other files formats which are not packs"""
                 continue
 
-
-            # new_path = filename
-
-            # if os.path.isdir(filename):
-            #     new_path = verify_collision(filename)
-            # os.mkdir(new_path)
-            # logging.info(f"New reposit created during dezip process {new_path}")
-
-
             match file_extension:
                 case ".zip":
                     extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs)
@@ -199,7 +190,7 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack):
         os.mkdir(new_path)
         logging.info(f"New reposit created during dezip process {new_path}")       
         z.extractall(new_path)
-        
+
         logging.info(f"{old_path} extracted")
     remove_pack(old_path)
 

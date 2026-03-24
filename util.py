@@ -120,6 +120,13 @@ def create_objects(rep, report_r, user, registre):
     write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
 
 def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
+    """
+    Docstring for sail_to_bay
+    Function de transfert vers les répertoires de traitement et de sauvegarde
+    :param rep: Répertoire source
+    :param originals: Répertoire de sauvegarde des originaux
+    :param copies: Répertoire de traitement 
+    """
     
     # registre.write_report("hash_report.csv", report_r, type="hash")
     robot_copy(rep, originals, report_r)

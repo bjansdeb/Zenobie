@@ -10,6 +10,14 @@ formatter = logging.Formatter("{name} - {asctime} - {levelname} : {message}", st
 console_handler.setFormatter(formatter)
 
 def log_it(type, text):
+    """
+    Docstring for log_it
+    Function d'écriture de log et de prompt
+    :param type: "debug", "info", "warning", "error" 
+    :param text: (str)
+    """
+
+
     match type:
         case "debug":
             return logger.debug(text)
