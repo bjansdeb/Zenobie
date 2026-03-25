@@ -14,8 +14,7 @@ def write_report(file_name, path, type, cible= None):
     file = os.path.join(path, file_name)
     match type:
         case "droid":
-            with open(file, "w+t", encoding="utf-8") as droid_r:
-                droid_r.write("***Droid identification official report***\n")
+            with open(file, "w", encoding="utf-8") as droid_r:
                 droid_r.write(f"{cible.stdout}")
         
         case "hash":

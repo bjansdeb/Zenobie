@@ -3,7 +3,8 @@ import py7zr
 import stat
 import tarfile
 import zipfile
-import logging
+
+from log import log_it
 from pathlib import Path
 
 
@@ -50,9 +51,9 @@ def dezip(copies_rep):
             for pack in uncompliant_packs:
                 uncompliant_r.write(f"\n{pack}")
 
-        logging.info(f"There are packages not compliant with your format policy.")
-        logging.info(f"You can check the list here : {pat}")
-        logging.info(f"Please, note that some of these packs may contain dangerous links")
+        log_it("info", f"There are packages not compliant with your format policy.")
+        log_it("info",f"You can check the list here : {pat}")
+        log_it("info",f"Please, note that some of these packs may contain dangerous links")
         answeer= input("May I remove them (yes/no)? :")
         while True :
             if answeer == "yes":
@@ -72,8 +73,8 @@ def dezip(copies_rep):
                 uncompliant_r.write(f"\n{pack}")
 
 
-        logging.info(f"There are also packages compliant with your format policy but that exceeds the authorized maximum size of 1 go or maximum number of files")
-        logging.info(f"You can check the list here : {pat}")
+        log_it("info", f"There are also packages compliant with your format policy but that exceeds the authorized maximum size of 1 go or maximum number of files")
+        log_it("info",f"You can check the list here : {pat}")
         anwseer = input("May I remove them (yes/no)? :")
         while True:
             if anwseer == "yes":
@@ -106,7 +107,7 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack):
             print("external attributes", entry.external_attr)
             
         if compressed_size >= MAX_TOTAL_SIZE or files_number >= MAX_FILES:
-            logging.warning(f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
+            log_it("warning",f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
             exceed_pack.append(old_path)
             return
 
@@ -115,10 +116,10 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack):
         if os.path.isdir(file_n):
             new_path = verify_collision(file_n)
         os.mkdir(new_path)
-        logging.info(f"New reposit created during dezip process {new_path}")
+        log_it("info",f"New reposit created during dezip process {new_path}")
 
         zip.extractall(new_path)
-        logging.info(f"{old_path} extracted")
+        log_it("info", f"{old_path} extracted")
     remove_pack(old_path)
 
 def extact_tarfile(old_path, file_n, uncomp_pack, exceed_pack):
@@ -141,7 +142,7 @@ def extact_tarfile(old_path, file_n, uncomp_pack, exceed_pack):
                 return
             
         if compressed_size >= MAX_TOTAL_SIZE or files_number >= MAX_FILES:
-            logging.warning(f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
+            log_it("warning",f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
             exceed_pack.append(old_path)
             return
 
@@ -151,10 +152,10 @@ def extact_tarfile(old_path, file_n, uncomp_pack, exceed_pack):
             new_path = verify_collision(file_n)
         os.mkdir(new_path)
 
-        logging.info(f"New reposit created during dezip process {new_path}")
+        log_it("info",f"New reposit created during dezip process {new_path}")
         
         tar.extractall(new_path, filter="data")       
-        logging.info(f"{old_path} extracted")            
+        log_it("info",f"{old_path} extracted")            
     remove_pack(old_path)
 
 
@@ -179,7 +180,7 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack):
                     
         compressed_size = infos_package.uncompressed
         if compressed_size >= MAX_TOTAL_SIZE or files_number >= MAX_FILES:
-            logging.warning(f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
+            log_it("warning",f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
             exceed_pack.append(old_path)
             return
         
@@ -188,16 +189,16 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack):
         if os.path.isdir(file_n):
             new_path = verify_collision(file_n)
         os.mkdir(new_path)
-        logging.info(f"New reposit created during dezip process {new_path}")       
+        log_it("info",f"New reposit created during dezip process {new_path}")       
         z.extractall(new_path)
 
-        logging.info(f"{old_path} extracted")
+        log_it("info",f"{old_path} extracted")
     remove_pack(old_path)
 
 
 def remove_pack(old_path):
     os.remove(old_path)  
-    logging.info(f"{old_path} was removed")              
+    log_it("info",f"{old_path} was removed")              
 
 def verify_collision(n_path):
     base, ext = os.path.splitext(n_path)
