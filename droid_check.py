@@ -1,6 +1,6 @@
 import os
 import subprocess
-
+import time
 
 from log import log_it
 from models import PremisObjects
@@ -12,8 +12,11 @@ def main():
     copies_repository = str(input("Path:"))
     reports = ""
     registre = PremisObjects()
-
     droid_check(copies_repository, reports, registre)
+
+
+
+    
 
 def droid_check(rep, reports, registre):
     """à rajouter plus tard, pour obtenir certains types de métadonnées"""
@@ -27,8 +30,12 @@ def droid_check(rep, reports, registre):
 
     if os.path.isfile(droid_path):
         try:
+            log_it("info", "DROID has been launched, please note that that can take a few minutes...")
             result = subprocess.run([droid_path, "-a", rep, "-R"], text=True, capture_output=True, check=True)
-            write_report("droid_report.txt", reports, "droid", result)
+            write_report("droid_report.csv", reports, "droid", result)
+            log_it("info", "DROID has successfully finished ! " \
+            f"You can see the report into {reports}")
+
         except subprocess.CalledProcessError as e:
             print(e.stderr, e.stdout)
 
