@@ -23,6 +23,7 @@ def droid_check(rep, reports, registre):
     if os.path.isfile(droid_path):
         try:
             log_it("info", "DROID has been launched, please note that that can take a few minutes...")
+            log_it("info", "DROID has been launched, please note that that can take a few minutes...")
             result = subprocess.run([droid_path, "-a", rep, "-R"], text=True, capture_output=True, check=True)
             write_report("droid_report.csv", reports, "droid", result)
             log_it("info", "DROID has successfully finished ! " \

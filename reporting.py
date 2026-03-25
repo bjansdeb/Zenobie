@@ -17,6 +17,7 @@ def write_report(file_name, path, type, cible= None):
             with open(file, "w", encoding="utf-8") as droid_r:
                 droid_r.write(f"{cible.stdout}")
         
+        
         case "hash":
             with open(file, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']
