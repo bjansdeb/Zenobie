@@ -6,12 +6,14 @@ import zipfile
 
 from log import log_it
 from pathlib import Path
+from config import read_config
 
+config_data = read_config()
 
-MAX_FILES = 1_000
-MAX_TOTAL_SIZE = 1_000_000_000
-AUTHORIZED_PACKS = {".zip", ".tar", ".7z"}
-UNAUTHORIZED_PACKS = {".rar"}
+MAX_FILES = int(config_data['max_files'])
+MAX_TOTAL_SIZE = int(config_data['max_total_size'])
+AUTHORIZED_PACKS = config_data['authorized_packs']
+UNAUTHORIZED_PACKS = config_data['unauthorized_packs']
 
 
 def main():
@@ -20,6 +22,12 @@ def main():
 
 
 def dezip(copies_rep):
+    """
+    Docstring for dezp
+    Fonction de décompression
+    :param copies_rep: path : attention, ne prend que des répertoires, pas des fichiers
+    """
+
     exceeding_packs = []
     uncompliant_packs = []
     for root, dirs, files in os.walk(copies_rep):
@@ -38,12 +46,13 @@ def dezip(copies_rep):
                 case ".zip":
                     extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs)
                 case ".tar":
-                    extact_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
+                    extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
                 case ".gz":
-                    extact_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
+                    extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
                 case ".7z":
                     extract_7zfile(old_path, filename, uncompliant_packs, exceeding_packs)
-
+    
+    print("match done", uncompliant_packs)
     if uncompliant_packs :
         pat = "uncompliant_packs.txt"
         with open(pat, "w+t", encoding="utf-8") as uncompliant_r:
@@ -122,7 +131,7 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack):
         log_it("info", f"{old_path} extracted")
     remove_pack(old_path)
 
-def extact_tarfile(old_path, file_n, uncomp_pack, exceed_pack):
+def extract_tarfile(old_path, file_n, uncomp_pack, exceed_pack):
     with tarfile.open(old_path, "r:*") as tar:
         compressed_size = 0
         files_number= 0

@@ -118,7 +118,6 @@ class State:
     full_size : int | None = None
     date : str | None = None
     depth : str | None = None
-    stats : str | None = None
     files_number : int | None = None
     repositories_number : int | None = None
     oldest_created_file : str | None = None

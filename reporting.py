@@ -32,7 +32,6 @@ def write_report(file_name, path, type, cible= None):
                 state_r.write(f"Audit of {cible.title}")
                 state_r.write(f"\nSize of the repository :{cible.full_size} bytes")
                 state_r.write(f"\nMax-depth: {cible.depth}")
-                state_r.write(f"\nStats : {cible.stats}")
                 state_r.write(f"\nNumber of files : {cible.files_number}")
                 state_r.write(f"\nNumber of repositories : {cible.repositories_number}")
                 state_r.write("\n*Please, note that the indicated dates depend on the operating system and may considerably changed from a system to another*")

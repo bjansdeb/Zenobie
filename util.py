@@ -175,16 +175,19 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
 def state_of_art(rep, reports, us, registre):
     log_it("info","Start of the files audit")
     start_depth = 1
-    full_size = str(os.path.getsize(str(rep))) #taille du contenu de la totalité du répertoire en bytes
+    repositories_number = 0
+    files_number = 0
+    full_size = os.path.getsize(str(rep)) #taille du contenu de la totalité du répertoire en bytes
     date = horodatage() #horodatage du rapport
-    stats = os.stat(rep)
     state_report = State(rep, us.agentName, us.note, date=horodatage())
     tree = {}
     all_paths = [] #pour calculer le plus anciens/récents
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
-        repositories_number += 1
+        print(root, type(root))
+        if os.path.isdir(root):
+            repositories_number += 1
         
         tree[root] = {
             "dirs": dirs,
@@ -193,7 +196,8 @@ def state_of_art(rep, reports, us, registre):
         for file in files:
             fp = os.path.join(root, file)        
             full_size += os.path.getsize(fp)
-            files_number += 1
+            if os.path.isfile(file):
+                files_number += 1
             all_paths.append(fp)
 
     if all_paths:
@@ -206,8 +210,8 @@ def state_of_art(rep, reports, us, registre):
         most_recent_modified_f = max(all_paths, key= os.path.getmtime)
         most_rmt = str(datetime.datetime.fromtimestamp(os.path.getctime(most_recent_modified_f)))
 
+    state_report.date = date
     state_report.full_size=full_size
-    state_report.stats = stats
     state_report.repositories_number= repositories_number
     state_report.files_number=files_number
     state_report.oldest_created_file = oldest_created_f
@@ -236,8 +240,7 @@ def dezip(copies_rep, registre):
                     registre.add_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}", eventDateTime=horodatage()))
                     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
 
-def droid_check(rep, reports, registre):
-    
+def droid_check(rep, reports, registre): 
     """à rajouter plus tard, pour obtenir certains types de métadonnées"""
     #$ droid -co NAME PUID -a file.jpg
     #"NAME","PUID"

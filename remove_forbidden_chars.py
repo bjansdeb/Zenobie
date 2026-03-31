@@ -4,6 +4,7 @@ import re
 
 FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
 
+
 def main():
     path = str(input("path : "))
     remove_forbidden_chars(path)

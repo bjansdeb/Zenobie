@@ -3,9 +3,8 @@ import sys
 from errors import EmptyError
 from log import log_it
 from models import Agent, Event, Object, Report, Mets, PremisObjects, State
-from util import create_bay, create_objects, sail_to_bay, state_of_art, dezip, droid_check, remove_empty, remove_forbidden_chars, write_report, horodatage
-
-#os.utime() report
+from reporting import write_report
+from util import *
 
 def main():
     
@@ -59,6 +58,7 @@ def main():
                 raise EmptyError            
         except EmptyError:
             log_it("warnin","Please, answeer by yes or no")
+
     while True:
         try:
             answeer = str(input("May I scan and remove empty repositories(yes/no)?")).lstrip().lower()
@@ -66,10 +66,11 @@ def main():
                 remove_empty(copies_repository, reports, registre)
                 break
             elif answeer == "no":
-                log_it("info","ok, we continue without removing the empty repositories")
+                log_it("info","Ok, we continue without removing the empty repositories")
                 break
         except EmptyError:
             log_it("warning","Please, answeer by yes or no ")
+
     while True:
         try: 
             answeer = str(input("Ok, now let's take a look to the forbidden chars. May I scan and removing them (yes/no)?")).lstrip().lower()
@@ -77,13 +78,16 @@ def main():
                 remove_forbidden_chars(copies_repository, reports, registre)
                 break
             elif answeer == "no":
-                log_it("info","ok, we continue without removing the empty repositories")
+                log_it("info","Ok, we continue without removing the forbidden chars")
                 break                    
         except EmptyError:
             log_it("warning","Please, answeer by yes or no ")  
 
+    log_it("info", "The process is almost finished. We are going looking to the formats used in this directrory with DROID. " \
+    "Please, not that some formats are forbidden by your formats policy")
     droid_check(copies_repository, reports, registre)
     write_report("events_report.txt", reports, type="event", cible=registre)
+    
     while True:
         try:
             input(f"Process successfully finished {user.agentName}, do ctrl+c to quit the program")
