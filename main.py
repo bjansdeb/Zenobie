@@ -83,8 +83,8 @@ def main():
         except EmptyError:
             log_it("warning","Please, answeer by yes or no ")  
 
-    log_it("info", "The process is almost finished. We are going looking to the formats used in this directrory with DROID. " \
-    "Please, not that some formats are forbidden by your formats policy")
+    log_it("info", "The process is almost finished. We are going to look to the formats used in this directrory with DROID. " \
+    "Please, not that some formats may be forbidden by your formats policy")
     droid_check(copies_repository, reports, registre)
     write_report("events_report.txt", reports, type="event", cible=registre)
     
