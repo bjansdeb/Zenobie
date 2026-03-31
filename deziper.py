@@ -30,6 +30,7 @@ def dezip(copies_rep):
 
     exceeding_packs = []
     uncompliant_packs = []
+    archives_to_unpack = []
     for root, dirs, files in os.walk(copies_rep):
         for file in files :
             old_path = os.path.join(root, file)
@@ -41,18 +42,19 @@ def dezip(copies_rep):
             if file_extension.lower() not in AUTHORIZED_PACKS:
                 """let the other files formats which are not packs"""
                 continue
-
-            match file_extension:
-                case ".zip":
-                    extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs)
-                case ".tar":
-                    extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
-                case ".gz":
-                    extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
-                case ".7z":
-                    extract_7zfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            archives_to_unpack.append((old_path, filename, file_extension.lower()))
     
-    print("match done", uncompliant_packs)
+    for old_path, filename, file_extension in archives_to_unpack:
+        match file_extension:
+            case ".zip":
+                extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            case ".tar":
+                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            case ".gz":
+                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            case ".7z":
+                extract_7zfile(old_path, filename, uncompliant_packs, exceeding_packs)
+
     if uncompliant_packs :
         pat = "uncompliant_packs.txt"
         with open(pat, "w+t", encoding="utf-8") as uncompliant_r:
@@ -194,12 +196,14 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack):
             return
         
         new_path = file_n
-
+        print(old_path)
         if os.path.isdir(file_n):
             new_path = verify_collision(file_n)
         os.mkdir(new_path)
-        log_it("info",f"New reposit created during dezip process {new_path}")       
-        z.extractall(new_path)
+
+        log_it("info",f"New reposit created during dezip process {new_path}")
+        print(old_path)       
+        z.extractall(path=new_path)
 
         log_it("info",f"{old_path} extracted")
     remove_pack(old_path)

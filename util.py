@@ -237,7 +237,7 @@ def state_of_art(rep, reports, us, registre):
     state_report.depth = max_depth
     registre.add_event(Event(eventType="appraisal", eventDateTime=horodatage(), eventDetail= state_report, eventOutcome="success"))
     write_report("initial_audit_report.txt", reports, "state", cible= state_report)
-    log_it("info", "Audit succesly finished")
+    log_it("info", "Audit succesfully finished")
 
 """Décompression des fichiers"""
 def dezip(copies_rep, registre):
@@ -249,6 +249,7 @@ def dezip(copies_rep, registre):
 
     exceeding_packs = []
     uncompliant_packs = []
+    archives_to_unpack = []
     for root, dirs, files in os.walk(copies_rep):
         for file in files :
             old_path = os.path.join(root, file)
@@ -260,21 +261,22 @@ def dezip(copies_rep, registre):
             if file_extension.lower() not in AUTHORIZED_PACKS:
                 """let the other files formats which are not packs"""
                 continue
-
-            match file_extension:
-                case ".zip":
-                    extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs)
-                case ".tar":
-                    extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
-                case ".gz":
-                    extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
-                case ".7z":
-                    extract_7zfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            archives_to_unpack.append((old_path, filename, file_extension.lower()))
+    
+    for old_path, filename, file_extension in archives_to_unpack:
+        match file_extension:
+            case ".zip":
+                extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            case ".tar":
+                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            case ".gz":
+                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs)
+            case ".7z":
+                extract_7zfile(old_path, filename, uncompliant_packs, exceeding_packs)
 
     registre.add_event(Event(eventType="unpacking", eventDetail="Unpacked from : {f}", eventDateTime=horodatage()))
     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
    
-    print("match done", uncompliant_packs)
     if uncompliant_packs :
         pat = "uncompliant_packs.txt"
         with open(pat, "w+t", encoding="utf-8") as uncompliant_r:
@@ -529,8 +531,8 @@ def remove_forbidden_chars(rep, report_r, registre):
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
-                    "/e", "/copyall", f"/log+:{log_repository}/transfert_report.txt"], 
-                    check=False)
+                    "/e", "/copy:DATSO", f"/log+:{log_repository}/transfert_report.txt"], 
+                    check=False) #/copyall changé en /copy:DATSO
     #robotcopy contient de nombreuses métadonnées qu'on pourrait utiliser pour le rapport ultérieurement
 
 def hash_calculator(source):
