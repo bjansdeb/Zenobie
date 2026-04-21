@@ -108,8 +108,10 @@ def create_bay(user, project_n, registre):
     else :
         os.mkdir(reports_project)
         log_it("info","Reports sub repository created")
+
+    paths = {'originals' : project_or, 'copies': project_cop, 'unload_bay': unload_bay, 'reports': reports_project}
     
-    return project_or, project_cop, unload_bay, reports_project
+    return paths
 
 def create_objects(rep, report_r, user, registre):
     """Création des objets et calcul et détermination des hash dans le fichier racine"""

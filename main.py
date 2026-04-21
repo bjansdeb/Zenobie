@@ -31,8 +31,12 @@ def main():
         except FileNotFoundError:
             raise("The indicated path is not correct, retry")
 
+    project_paths = create_bay(user, project_name, registre) #création des dossiers de la baie d'arrivage si n'existent pas  
+    originals_repository = project_paths['originals']
+    copies_repository = project_paths['copies']
+    unload_bay = project_paths['unload_bay']
+    reports = project_paths['reports']
 
-    originals_repository, copies_repository, unload_bay, reports = create_bay(user, project_name, registre)  #création des dossiers de la baie d'arrivage si n'existent pas    
     if os.path.isdir(repository):
         create_objects(repository, reports, user, registre)
     

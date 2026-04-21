@@ -19,6 +19,7 @@ def write_report(file_name, path, type, cible= None):
         
         
         case "hash":
+            print(file)
             with open(file, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
