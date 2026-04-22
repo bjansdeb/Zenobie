@@ -2,7 +2,7 @@ import os
 import sys
 from errors import EmptyError
 from log import log_it
-from models import Agent, Event, Object, Report, Mets, PremisObjects, State
+from models import Agent, Event, Object, Mets, PremisObjects, State
 from reporting import write_report
 from util import *
 
@@ -61,7 +61,7 @@ def main():
             else :
                 raise EmptyError            
         except EmptyError:
-            log_it("warnin","Please, answeer by yes or no")
+            log_it("warning","Please, answeer by yes or no")
 
     while True:
         try:

@@ -172,10 +172,11 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     :param originals: Répertoire de sauvegarde des originaux
     :param copies: Répertoire de traitement 
     """
-    
-    robot_copy(rep, originals, report_r)
+    print("originals", originals)
+    print("copies", copies)
+    robo_copy(rep, originals, report_r, "robocopy_transfer_originals_report.txt")
 
-    robot_copy(rep, copies, report_r)
+    robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt")
     
 
     
@@ -208,32 +209,33 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     """
     Match des hash de registre objects avec originals_hash_dict pour vérifier si pas de problème d'intégrité après transfert
     """
-    files_with_hash_problem = {}
-    for obj in registre.objects.values():
-        if obj.messageDigest in originals_hash_dict:
-            event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-            eventDetail= f"{originals_hash_dict[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
-            registre.add_event(event)
-        else :
-            event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-            eventDetail= f"{originals_hash_dict[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
-            registre.add_event(event)
-            files_with_hash_problem[obj.messageDigest] = originals_hash_dict[obj.messageDigest]
+    # files_with_hash_problem = {}
+    # for obj in registre.objects.values():
+    #     if obj.messageDigest in originals_hash_dict:
+    #         event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+    #         eventDetail= f"{originals_hash_dict[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
+    #         registre.add_event(event)
+    #     else :
+    #         event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+    #         eventDetail= f"{originals_hash_dict[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
+    #         registre.add_event(event)
+    #         files_with_hash_problem[obj.messageDigest] = originals_hash_dict[obj.messageDigest]
 
-    if files_with_hash_problem :
-        write_report("hash_problems_with_originals.txt", report_r, "unmatched_hash", files_with_hash_problem)
-        log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
-        files_with_hash_problem.clear()
+    # if files_with_hash_problem :
+    #     write_report("hash_problems_with_originals.txt", report_r, "unmatched_hash", files_with_hash_problem)
+    #     log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
+    #     files_with_hash_problem.clear()
+    hash_match(registre, originals_hash_dict, "hash_problems_with_originals.txt", report_r)
 
     """
     Match des hash de registre objects avec copies_hash_dict pour vérifier si pas de problème d'intégrité après transfert
     """
-    hash_match(registre.objects, copies_hash_dict, "hash_problems_with_copies.txt", report_r)
+    hash_match(registre, copies_hash_dict, "hash_problems_with_copies.txt", report_r)
 
 
     
     """
-    Match des hash de registre objects avec copies_hash_dict et mise à jour de l'emplacement des objets
+    Match des hash de registre objects avec copies_hash_dict pour metre à jour l'emplacement des objets
     """
     for obj in registre.objects.values():
         if obj.messageDigest in copies_hash_dict:
@@ -603,17 +605,27 @@ def remove_forbidden_chars(rep, report_r, registre):
 """            **** Functions secondaires  ****   """
 """-----------------------------------------------"""
 
-def robot_copy(source, destination, log_repository):
+def robo_copy(source, destination, log_repository, report_name: str):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
-    process = subprocess.run(["robocopy", source, destination, 
-                    "/e", "/copy:DATSO", f"/log+:{log_repository}/transfert_report.txt"], 
+    process = subprocess.run(["robocopy", source, destination,
+                    "/e", "/copy:DATSO", f"/log+:{log_repository}/{report_name}"], 
                     check=False) #/copyall changé en /copy:DATSO
-    print("robot_copy_value:", process) #si 0, ok sinon échec
-    if process == 0 :
+    if process.returncode == 1 :
         log_it("info", "robot_copy successful finished")
     else:
-        log_it("error", f"robot_copy has encounter an error \nplease check the {log_repository}/transfert_report.txt to fix it before retry the process")
-        sys.exit()
+        log_it("error", f"robot_copy has encounter an error \nplease check the {log_repository}/{report_name} to fix it before retry the process")
+        while True:
+            try:
+                answeer = str(input("Do you want to continue despite this problem (yes/no)?")).lstrip().lower()
+                if answeer == "yes":
+                    log_it("info","Ok, we continue without removing the empty repositories")
+                    break
+                elif answeer == "no":
+                    log_it("info","Ok, exiting the script because of robocopy problem")
+                    sys.exit()
+            except EmptyError:
+                log_it("warning","Please, answeer by yes or no ")
+
 
 def hash_calculator(source):
     # sha_256 = hashlib.sha256() #à décocher si on veut cet algo à la place de md5
@@ -624,9 +636,9 @@ def hash_calculator(source):
             md5.update(chunk)
     return md5.hexdigest()
 
-def hash_match(source: object.registre, cible: dict, report_name: str, report_r):
+def hash_match(source: object, cible: dict, report_name: str, report_r):
     files_with_hash_problem = {}
-    for obj in source.values():
+    for obj in source.objects.values():
         if obj.messageDigest in cible:
             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
             eventDetail= f"{cible[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
