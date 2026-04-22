@@ -1,6 +1,7 @@
 import csv
 import datetime 
 import hashlib
+import json
 import os
 import py7zr
 import re 
@@ -35,11 +36,11 @@ FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
 def create_bay(user, project_n, registre):
     log_it("info","Creating bay...")
     parent_dir = os.path.dirname(__file__)
-    filename, file_extension = os.path.splitext(project_n)  
+    filename, _ = os.path.splitext(project_n)  
     project = os.path.join(parent_dir, filename + "_project") #ajoute un dossier de projet avec le nom du fonds d'origine
     unload_bay = os.path.join(project, "unload_bay")
 
-    """Création du projet si inexistant"""
+    """Création du dossier projet si inexistant"""
     if os.path.isdir(project):
          log_it("warning","Unload bay already exists")
          while True :
@@ -57,12 +58,18 @@ def create_bay(user, project_n, registre):
     else : 
         os.mkdir(project)
 
-    """Création de la baie si inexistant"""
+    """
+    Création de la baie si inexistant
+    """
     if os.path.isdir(unload_bay):
-         log_it("info","Unload bay already exists")       
+         log_it("warning","Unload bay already exists")       
     else : 
         os.mkdir(unload_bay)
+        log_it("info", "Unload bay repository created")
 
+    """
+    Création du répertoire avec originaux si inexistant
+    """
     original_rep = "original_room"
     originals = os.path.join(unload_bay, original_rep)
     if os.path.isdir(originals):
@@ -71,6 +78,9 @@ def create_bay(user, project_n, registre):
         os.mkdir(originals)
         log_it("info", "Originals repository created")
     
+    """
+    Création du répertoire de travail si inexistant
+    """
     copies_rep = "sorting_room"
     copies = os.path.join(unload_bay, copies_rep)
     if os.path.isdir(copies):
@@ -79,6 +89,9 @@ def create_bay(user, project_n, registre):
         os.mkdir(copies)
         log_it("info","Copies repository created")
 
+    """
+    Création du dossier de rapports si inexistant
+    """
     report_rep = "reports"
     reports = os.path.join(unload_bay, report_rep)
     if os.path.isdir(reports):
@@ -87,6 +100,9 @@ def create_bay(user, project_n, registre):
         os.mkdir(reports)
         log_it("info","Reports repository created")
 
+    """
+    Création du sous-dossier de projet contenant les originaux si inexistant
+    """
     project_or = os.path.join(originals, project_n)
     if os.path.isdir(project_or):
         log_it("warning","Project original repository already exists")
@@ -94,6 +110,10 @@ def create_bay(user, project_n, registre):
         os.mkdir(project_or)
         log_it("info","Project original repository created")
 
+
+    """
+    Création du sous-dossier de projet contenant les copies de travail si inexistant
+    """
     project_cop = os.path.join(copies, project_n)
     if os.path.isdir(project_cop):
         log_it("warning","Project copies repository already exists")
@@ -101,7 +121,9 @@ def create_bay(user, project_n, registre):
         os.mkdir(project_cop)
         log_it("info","Project copies repository created")
     
-    """Création d'un dossier reports avec un sous-dossier 'reports'"""
+    """
+    Création d'un sous-dossier de reporting dans report avec nom du projet
+    '"""
     reports_project = os.path.join(reports, project_n)
     if os.path.isdir(reports_project):
         log_it("warning","Reports sub repository already exists")
@@ -114,22 +136,32 @@ def create_bay(user, project_n, registre):
     return paths
 
 def create_objects(rep, report_r, user, registre):
-    """Création des objets et calcul et détermination des hash dans le fichier racine"""
+    """
+    Création des objets et calcul et détermination des hash dans le fichier racine
+    """
 
-    for root, dirs, files in os.walk(rep): 
+    for root, _, files in os.walk(rep):  #_ était dirs
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
             filename, file_extension = os.path.splitext(f)          
-            obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", contentLocationValue=f, messageDigestAlgorithm="md5", messageDigest=md5, originalName=filename)
-            event = Event(eventType="digital signature generation", eventDateTime=horodatage(), eventDetail=obj.messageDigest, eventOutcome="success")
+            
+            obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", 
+                       contentLocationValue=f, messageDigestAlgorithm="md5", 
+                       messageDigest=md5, originalName=filename)
+            
+            event = Event(eventType="digital signature generation", eventDateTime=horodatage(), 
+                          eventDetail=obj.messageDigest, eventOutcome="success")
+            
             event.add_linking_agent(user)
             obj.add_linking_event(event)
             event.add_linking_object(obj, "source")
+            
             registre.add_event(event)              
             registre.add_object(obj)
             registre.add_uri(f, obj)
     #registre.get_uris()
+
     write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
 
 def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
@@ -141,14 +173,14 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     :param copies: Répertoire de traitement 
     """
     
-    # registre.write_report("hash_report.csv", report_r, type="hash")
     robot_copy(rep, originals, report_r)
+
     robot_copy(rep, copies, report_r)
-    #Event("replication")
-    #Event("transfert")
+    
+
     originals_hash_dict ={}
     """Calcul des hash dans originals et match avec registre"""
-    for root, dirs, files in os.walk(originals): 
+    for root, _, files in os.walk(originals): 
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f) 
@@ -156,7 +188,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
 
     copies_hash_dict = {}
     """Calcul des hash dans copies et match avec registre"""
-    for root, dirs, files in os.walk(copies): 
+    for root, _, files in os.walk(copies): 
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
@@ -167,22 +199,27 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     #         print("Integrity verification on originals is conform")
     #     else:
     #         print("Integrity verification on non originals is not conform")
+
+    # + replication event
     for obj in registre.objects.values():
         if obj.messageDigest in copies_hash_dict:
             old_location =  obj.contentLocationValue
             obj.contentLocationValue = copies_hash_dict[obj.messageDigest]
-            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="success", eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue}")
+            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="success", 
+                          eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue}")
             obj.add_linking_event(event)
             event.add_linking_object(obj, "outcome")
             registre.add_event(event)           
         else:
             old_location = obj.contentLocationValue
-            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="failure", eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue} has failed")
+            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="failure", 
+                          eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue} has failed")
             obj.add_linking_event(event)
             event.add_linking_object(obj, "outcome")
             registre.add_event(event)    
             log_it("warning",f"warning, this object {obj} has a problematic check")
     write_report("moving_report.txt", report_r, "transfer", cible=registre )
+
 
 """Etat des lieux"""
 def state_of_art(rep, reports, us, registre):
@@ -532,10 +569,15 @@ def remove_forbidden_chars(rep, report_r, registre):
 
 def robot_copy(source, destination, log_repository):
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
-    subprocess.run(["robocopy", source, destination, 
+    process = subprocess.run(["robocopy", source, destination, 
                     "/e", "/copy:DATSO", f"/log+:{log_repository}/transfert_report.txt"], 
                     check=False) #/copyall changé en /copy:DATSO
-    #robotcopy contient de nombreuses métadonnées qu'on pourrait utiliser pour le rapport ultérieurement
+    print("robot_copy_value:", process) #si 0, ok sinon échec
+    if process == 0 :
+        log_it("info", "robot_copy successful finished")
+    else:
+        log_it("error", f"robot_copy has encounter an error \nplease check the {log_repository}/transfert_report.txt to fix it before retry the process")
+        sys.exit()
 
 def hash_calculator(source):
     # sha_256 = hashlib.sha256() #à décocher si on veut cet algo à la place de md5
@@ -602,3 +644,9 @@ def is_safe_path(base_dir: Path, requested_path: str) -> bool:
        return target_path.is_relative_to(base_dir)
     except (RuntimeError, ValueError):
        return False
+
+def serialize(object):
+    return json.dumps(object)
+
+def deserialize(json_file):
+    return json.loads(json_file)

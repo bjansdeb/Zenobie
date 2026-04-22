@@ -108,8 +108,6 @@ class Event:
         print(self.eventIdentifierType, self.eventIdentifierValue, 
               self.eventType, self.eventDateTime, self.agent)
 
-
-
 @dataclass
 class State:
     title : str
@@ -352,17 +350,6 @@ class Representation(Object):
     contentLocationValue : str | None = None #(M, NR) [Representation, File, Bitstream]
 
     """1.7.2    storageMedium (O, NR) [Representation, File, Bitstream]"""
-
-
-class Report:
-    def __init__(self, title, creation_time, author):
-        self.title = title
-        self.time = creation_time
-        self.author = author
-        self.actions = {}
-       
-    def record_it(self, action):
-        self.actions.append(action)
 
 @dataclass
 class Right:

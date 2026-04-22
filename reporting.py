@@ -2,6 +2,8 @@ import csv
 import os
 from log import log_it
 
+
+
 def write_report(file_name, path, type, cible= None):
     """
     Docstring for write_report
