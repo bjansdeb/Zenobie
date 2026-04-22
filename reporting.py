@@ -30,6 +30,16 @@ def write_report(file_name, path, type, cible= None):
                     writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
             log_it("info",f"Hash report done, see {file}")
 
+        case "unmatched_hash":
+            with open(file, 'w', newline='', encoding='utf-8') as f:
+                fieldnames = ['object_name', 'hash']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for object in cible.objects.values() :
+                    writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
+            log_it("info",f"Hash report done, see {file}")            
+
+
         case "state":           
             with open(file, "w+t", encoding="utf-8") as state_r:
                 state_r.write(f"Audit of {cible.title}")
