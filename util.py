@@ -209,22 +209,6 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     """
     Match des hash de registre objects avec originals_hash_dict pour vérifier si pas de problème d'intégrité après transfert
     """
-    # files_with_hash_problem = {}
-    # for obj in registre.objects.values():
-    #     if obj.messageDigest in originals_hash_dict:
-    #         event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-    #         eventDetail= f"{originals_hash_dict[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
-    #         registre.add_event(event)
-    #     else :
-    #         event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-    #         eventDetail= f"{originals_hash_dict[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
-    #         registre.add_event(event)
-    #         files_with_hash_problem[obj.messageDigest] = originals_hash_dict[obj.messageDigest]
-
-    # if files_with_hash_problem :
-    #     write_report("hash_problems_with_originals.txt", report_r, "unmatched_hash", files_with_hash_problem)
-    #     log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
-    #     files_with_hash_problem.clear()
     hash_match(registre, originals_hash_dict, "hash_problems_with_originals.txt", report_r)
 
     """
@@ -327,7 +311,7 @@ def dezip(copies_rep, registre):
     exceeding_packs = []
     uncompliant_packs = []
     archives_to_unpack = []
-    for root, dirs, files in os.walk(copies_rep):
+    for root, _, files in os.walk(copies_rep):
         for file in files :
             old_path = os.path.join(root, file)
             filename, file_extension = os.path.splitext(old_path)
