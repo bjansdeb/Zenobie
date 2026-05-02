@@ -33,7 +33,7 @@ FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
-def create_bay(user, project_n, registre):
+def create_bay(user, project_n: str, registre) -> dict:
     log_it("info","Creating bay...")
     parent_dir = os.path.dirname(__file__)
     filename, _ = os.path.splitext(project_n)  
@@ -144,10 +144,11 @@ def create_objects(rep, report_r, user, registre):
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
+            relative_path =  get_relative_path(f, rep) #f seul auparavant
             filename, file_extension = os.path.splitext(f)          
             
             obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", 
-                       contentLocationValue=f, messageDigestAlgorithm="md5", 
+                       contentLocationValue=relative_path, messageDigestAlgorithm="md5", 
                        messageDigest=md5, originalName=filename)
             
             event = Event(eventType="digital signature generation", eventDateTime=horodatage(), 
@@ -166,20 +167,19 @@ def create_objects(rep, report_r, user, registre):
 
 def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     """
-    Docstring for sail_to_bay
-    Function de transfert vers les répertoires de traitement et de sauvegarde
+    fonction de transfert vers les répertoires de traitement et de sauvegarde
     :param rep: Répertoire source
     :param originals: Répertoire de sauvegarde des originaux
     :param copies: Répertoire de traitement 
     """
-    print("originals", originals)
-    print("copies", copies)
-    robo_copy(rep, originals, report_r, "robocopy_transfer_originals_report.txt")
 
-    robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt")
+    robo_copy(rep, originals, report_r, "robocopy_transfer_originals_report.txt", registre)
+
+    robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt", registre)
     
 
-    
+    #à revoir à partir d'ici. Le calcul des hash apparait comme inutile après les derniers développements de robocopy
+    # revoir également le rapportage de transfert avec bug au niveau des chemins    
     """
     Calcul des hash dans originals pour match avec registre
     """
@@ -492,7 +492,7 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack):
 """Analyse des formats avec DROID"""
 def droid_check(rep, reports, registre): 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    droid_path = os.path.join(base_dir, "droid", "droid.bat") #subprocess refuses relative paths
+    droid_path = os.path.join(base_dir, "droid", "droid.bat") #subprocess refuse les chemins relatifs
 
     if os.path.isfile(droid_path):
         try:
@@ -589,10 +589,11 @@ def remove_forbidden_chars(rep, report_r, registre):
 """            **** Functions secondaires  ****   """
 """-----------------------------------------------"""
 
-def robo_copy(source, destination, log_repository, report_name: str):
+def robo_copy(source: str, destination: str, log_repository: str, report_name: str):
+
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     process = subprocess.run(["robocopy", source, destination,
-                    "/e", "/copy:DATSO", f"/log+:{log_repository}/{report_name}"], 
+                    "/e", "/copy:DATSO", f"/log+:{log_repository}/{report_name}", "/X", "/V", "/FP", "/TEE"], 
                     check=False) #/copyall changé en /copy:DATSO
     if process.returncode == 1 :
         log_it("info", "robot_copy successful finished")
@@ -609,7 +610,9 @@ def robo_copy(source, destination, log_repository, report_name: str):
                     sys.exit()
             except EmptyError:
                 log_it("warning","Please, answeer by yes or no ")
-
+    paths_source = get_relative_paths(source)
+    paths_destination = get_relative_paths(destination)
+    verify_hashs_and_paths(paths_source, paths_destination)
 
 def hash_calculator(source):
     # sha_256 = hashlib.sha256() #à décocher si on veut cet algo à la place de md5
@@ -637,6 +640,25 @@ def hash_match(source: object, cible: dict, report_name: str, report_r):
         write_report(report_name, report_r, "unmatched_hash", files_with_hash_problem)
         log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
         files_with_hash_problem.clear()
+
+def verify_hashs_and_paths(paths_source: dict, paths_destination: dict, log_repository: str = None):
+    integrity_problems ={}
+
+    for p in paths_destination:
+        if p in paths_source:
+            if paths_destination[p] == paths_source[p]:
+                continue
+            else :
+                integrity_problems[paths_destination[p]] = f"Hash {paths_destination[p]} does not match any path in the source repository"
+        else :
+            integrity_problems[paths_destination[p]] = f"{p} has not equivalent path in the source repository"
+    
+    if integrity_problems:
+        log_it("warning", "There are integrity problems with some displaced files")
+        return integrity_problems
+
+    else:
+        log_it("info", "integrity check done without problems")
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
@@ -694,6 +716,26 @@ def is_safe_path(base_dir: Path, requested_path: str) -> bool:
        return target_path.is_relative_to(base_dir)
     except (RuntimeError, ValueError):
        return False
+
+def get_relative_path(child_path: str, absolute_parent_path: str) -> str:
+    """Calcule le chemin relatif pour un chemin individuel donné à partir du répertoire parent absolu"""
+    child = Path(child_path)
+    parent = Path(fr'{absolute_parent_path}')
+    path = parent.name / child.relative_to(parent)
+    return path
+
+def get_relative_paths(source : str) -> dict:
+    """Calcule le chemin relatif pour un répertoire entier et les place dans un array avec leur hash comme key"""
+    paths_array = { }
+    path = os.walk(source)
+    for root, _, files in path :
+        for file in files:
+            filename = os.path.join(root, file)
+            p = Path(filename)
+            source_p = Path(fr'{source}')
+            hash_output = hash_calculator(filename)
+            paths_array[hash_output] = source_p.name / p.relative_to(source_p)
+    return paths_array
 
 def serialize(object):
     return json.dumps(object)

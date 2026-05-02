@@ -1,4 +1,5 @@
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 console_handler = logging.StreamHandler()
@@ -17,7 +18,6 @@ def log_it(type, text):
     :param text: (str)
     """
 
-
     match type:
         case "debug":
             return logger.debug(text)
@@ -26,4 +26,6 @@ def log_it(type, text):
         case "warning":
             return logger.warning(text)
         case "error":
-            return logger.warning(text)       
+            return logger.warning(text)
+               
+    time.sleep(2)
