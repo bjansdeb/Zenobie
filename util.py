@@ -173,49 +173,24 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     :param copies: Répertoire de traitement 
     """
 
-    robo_copy(rep, originals, report_r, "robocopy_transfer_originals_report.txt", registre)
 
-    robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt", registre)
-    
+    """première itération avec les originaux"""
+    paths_destination = robo_copy(rep, originals, report_r, "robocopy_transfer_originals_report.txt", registre)
+    integrity_problems = verify_hashs_and_paths(paths_destination, registre)
+    paths_destination.clear()
 
-    #à revoir à partir d'ici. Le calcul des hash apparait comme inutile après les derniers développements de robocopy
-    # revoir également le rapportage de transfert avec bug au niveau des chemins    
-    """
-    Calcul des hash dans originals pour match avec registre
-    """
-    originals_hash_dict ={}
+    if integrity_problems :
+        write_report(integrity_problems, "hash_problems_with_originals.txt", report_r) # à améliorer
+        integrity_problems.clear()
 
-    for root, _, files in os.walk(originals): 
-        for file in files :
-            f =os.path.join(root, file)
-            md5 = hash_calculator(f) 
-            originals_hash_dict [md5] = f           
+    """deuxième itération avec les copies"""
+    paths_destination = robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt", registre)
+    integrity_problems = verify_hashs_and_paths(paths_destination, registre)
+    paths_destination.clear()
 
-
-    """
-    Calcul des hash dans copies pour match avec registre
-    """
-    copies_hash_dict = {}
-
-    for root, _, files in os.walk(copies): 
-        for file in files :
-            f =os.path.join(root, file)
-            md5 = hash_calculator(f)
-            copies_hash_dict [md5] = f            
-    
-
-    # + replication event
-
-    """
-    Match des hash de registre objects avec originals_hash_dict pour vérifier si pas de problème d'intégrité après transfert
-    """
-    hash_match(registre, originals_hash_dict, "hash_problems_with_originals.txt", report_r)
-
-    """
-    Match des hash de registre objects avec copies_hash_dict pour vérifier si pas de problème d'intégrité après transfert
-    """
-    hash_match(registre, copies_hash_dict, "hash_problems_with_copies.txt", report_r)
-
+    if integrity_problems :
+        write_report(integrity_problems, "hash_problems_with_copies.txt", report_r)
+        integrity_problems.clear()
 
     
     """
@@ -589,7 +564,7 @@ def remove_forbidden_chars(rep, report_r, registre):
 """            **** Functions secondaires  ****   """
 """-----------------------------------------------"""
 
-def robo_copy(source: str, destination: str, log_repository: str, report_name: str):
+def robo_copy(source: str, destination: str, log_repository: str, report_name: str, registre: PremisObjects) -> dict:
 
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     process = subprocess.run(["robocopy", source, destination,
@@ -597,6 +572,10 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
                     check=False) #/copyall changé en /copy:DATSO
     if process.returncode == 1 :
         log_it("info", "robot_copy successful finished")
+        event = Event(eventType="transfer", eventDateTime=horodatage(), 
+        eventDetail= f"Robocopy process finished", eventOutcome="success")
+        registre.add_event(event)        
+        
     else:
         log_it("error", f"robot_copy has encounter an error \nplease check the {log_repository}/{report_name} to fix it before retry the process")
         while True:
@@ -610,9 +589,10 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
                     sys.exit()
             except EmptyError:
                 log_it("warning","Please, answeer by yes or no ")
-    paths_source = get_relative_paths(source)
+
     paths_destination = get_relative_paths(destination)
-    verify_hashs_and_paths(paths_source, paths_destination)
+    return paths_destination
+    
 
 def hash_calculator(source):
     # sha_256 = hashlib.sha256() #à décocher si on veut cet algo à la place de md5
@@ -622,6 +602,8 @@ def hash_calculator(source):
         while chunk := file.read(8192):
             md5.update(chunk)
     return md5.hexdigest()
+
+# hash_match(registre, originals_hash_dict, "hash_problems_with_originals.txt", report_r)
 
 def hash_match(source: object, cible: dict, report_name: str, report_r):
     files_with_hash_problem = {}
@@ -641,24 +623,30 @@ def hash_match(source: object, cible: dict, report_name: str, report_r):
         log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
         files_with_hash_problem.clear()
 
-def verify_hashs_and_paths(paths_source: dict, paths_destination: dict, log_repository: str = None):
+def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->dict:
+    """ Vérifie les hashs et les chemins récoltés dans paths_destination avec les chemins et hash contenus dans les objets de métadonnées"""
     integrity_problems ={}
-
-    for p in paths_destination:
-        if p in paths_source:
-            if paths_destination[p] == paths_source[p]:
+    for obj in registre.objects.values():
+        if obj.messageDigest in paths_destination:
+            if obj.contentLocationValue == paths_destination[obj.messageDigest]:
+                event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+                eventDetail= f"{paths_destination[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
+                registre.add_event(event)
                 continue
-            else :
-                integrity_problems[paths_destination[p]] = f"Hash {paths_destination[p]} does not match any path in the source repository"
-        else :
-            integrity_problems[paths_destination[p]] = f"{p} has not equivalent path in the source repository"
-    
+            else:
+                event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+                eventDetail= f"{paths_destination[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
+                registre.add_event(event)
+                integrity_problems[paths_destination[obj.messageDigest]] = f"Hash {paths_destination[obj.messageDigest]} does not match any path in the source repository"
+        else:
+            integrity_problems[paths_destination[obj.messageDigest]] = f"{obj.messageDigest} has not equivalent path in the source repository"
     if integrity_problems:
         log_it("warning", "There are integrity problems with some displaced files")
         return integrity_problems
 
     else:
-        log_it("info", "integrity check done without problems")
+        log_it("info", "integrity check done without problems")        
+
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')

@@ -56,15 +56,16 @@ def main() :
 def robo_copy(source: str, destination: str, log_repository: str):
     """ Copy source to destination. Include integrity check with hash and paths"""
 
-    paths_source = get_relative_path(source)
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
                     "/E", "/copy:DATSO", f"/log+:{log_repository}/transfert_report.txt", "/X", "/V", "/FP", "/TEE"], #copy_all changé en DASTO
                     check=False)
-    paths_destination = get_relative_path(destination)
+    
+    paths_source = get_relative_paths(source)    
+    paths_destination = get_relative_paths(destination)
     verify_hashs_and_paths(paths_source, paths_destination)
 
-def get_relative_path(source : str) -> dict:
+def get_relative_paths(source : str) -> dict:
     paths_array = { }
     path = os.walk(source)
     for root, _, files in path :

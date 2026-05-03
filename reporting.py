@@ -4,7 +4,7 @@ from log import log_it
 
 
 
-def write_report(file_name, path, type, cible= None):
+def write_report(file_name: str, path: str, type: str, cible: object= None):
     """
     Docstring for write_report
     Function d'écriture des rapports
