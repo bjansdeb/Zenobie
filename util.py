@@ -144,7 +144,7 @@ def create_objects(rep, report_r, user, registre):
         for file in files :
             f =os.path.join(root, file)
             md5 = hash_calculator(f)
-            relative_path =  get_relative_path(f, rep) #f seul auparavant
+            relative_path = get_relative_path(f, rep) #f seul auparavant
             filename, file_extension = os.path.splitext(f)          
             
             obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", 
@@ -160,7 +160,7 @@ def create_objects(rep, report_r, user, registre):
             
             registre.add_event(event)              
             registre.add_object(obj)
-            registre.add_uri(f, obj)
+            registre.add_absolute_path(obj, f)
     #registre.get_uris()
 
     write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
@@ -186,7 +186,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     """deuxième itération avec les copies"""
     paths_destination = robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt", registre)
     integrity_problems = verify_hashs_and_paths(paths_destination, registre)
-    paths_destination.clear()
+    #paths_destination.clear()
 
     if integrity_problems :
         write_report(integrity_problems, "hash_problems_with_copies.txt", report_r)
@@ -196,6 +196,10 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     """
     Match des hash de registre objects avec copies_hash_dict pour metre à jour l'emplacement des objets
     """
+    #for root, dirs, files in os.walk(copies):
+    #registre.absolute_paths
+
+
     for obj in registre.objects.values():
         if obj.messageDigest in copies_hash_dict:
             old_location =  obj.contentLocationValue
@@ -560,9 +564,7 @@ def remove_forbidden_chars(rep, report_r, registre):
     log_it("info", "removing of forbidden chars done")
 
 
-"""-----------------------------------------------"""
-"""            **** Functions secondaires  ****   """
-"""-----------------------------------------------"""
+
 
 def robo_copy(source: str, destination: str, log_repository: str, report_name: str, registre: PremisObjects) -> dict:
 
@@ -580,19 +582,23 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
         log_it("error", f"robot_copy has encounter an error \nplease check the {log_repository}/{report_name} to fix it before retry the process")
         while True:
             try:
-                answeer = str(input("Do you want to continue despite this problem (yes/no)?")).lstrip().lower()
+                answeer = str(input("Do you want to continue despite this problem (yes/no)? Answeer no will exit the script.")).lstrip().lower()
                 if answeer == "yes":
-                    log_it("info","Ok, we continue without removing the empty repositories")
+                    log_it("info","Ok, we continue despite the problem")
                     break
                 elif answeer == "no":
                     log_it("info","Ok, exiting the script because of robocopy problem")
                     sys.exit()
             except EmptyError:
-                log_it("warning","Please, answeer by yes or no ")
+                log_it("warning","Please, answeer by yes or no")
 
-    paths_destination = get_relative_paths(destination)
+    paths_destination = get_relative_paths(destination) #utile pour la vérification avec les hashs
     return paths_destination
     
+
+"""-----------------------------------------------"""
+"""            **** Functions secondaires  ****   """
+"""-----------------------------------------------"""
 
 def hash_calculator(source):
     # sha_256 = hashlib.sha256() #à décocher si on veut cet algo à la place de md5
@@ -605,27 +611,29 @@ def hash_calculator(source):
 
 # hash_match(registre, originals_hash_dict, "hash_problems_with_originals.txt", report_r)
 
-def hash_match(source: object, cible: dict, report_name: str, report_r):
-    files_with_hash_problem = {}
-    for obj in source.objects.values():
-        if obj.messageDigest in cible:
-            event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-            eventDetail= f"{cible[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
-            source.add_event(event)
-        else :
-            event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-            eventDetail= f"{cible[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
-            source.add_event(event)
-            files_with_hash_problem[obj.messageDigest] = cible[obj.messageDigest]
+# def hash_match(source: object, cible: dict, report_name: str, report_r):
+#     files_with_hash_problem = {}
+#     for obj in source.objects.values():
+#         if obj.messageDigest in cible:
+#             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+#             eventDetail= f"{cible[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
+#             source.add_event(event)
+#         else :
+#             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+#             eventDetail= f"{cible[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
+#             source.add_event(event)
+#             files_with_hash_problem[obj.messageDigest] = cible[obj.messageDigest]
             
-    if files_with_hash_problem :
-        write_report(report_name, report_r, "unmatched_hash", files_with_hash_problem)
-        log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
-        files_with_hash_problem.clear()
+#     if files_with_hash_problem :
+#         write_report(report_name, report_r, "unmatched_hash", files_with_hash_problem)
+#         log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
+#         files_with_hash_problem.clear()
 
 def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->dict:
     """ Vérifie les hashs et les chemins récoltés dans paths_destination avec les chemins et hash contenus dans les objets de métadonnées"""
+    
     integrity_problems ={}
+    
     for obj in registre.objects.values():
         if obj.messageDigest in paths_destination:
             if obj.contentLocationValue == paths_destination[obj.messageDigest]:
@@ -633,6 +641,7 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
                 eventDetail= f"{paths_destination[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
                 registre.add_event(event)
                 continue
+
             else:
                 event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
                 eventDetail= f"{paths_destination[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
@@ -640,6 +649,7 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
                 integrity_problems[paths_destination[obj.messageDigest]] = f"Hash {paths_destination[obj.messageDigest]} does not match any path in the source repository"
         else:
             integrity_problems[paths_destination[obj.messageDigest]] = f"{obj.messageDigest} has not equivalent path in the source repository"
+    
     if integrity_problems:
         log_it("warning", "There are integrity problems with some displaced files")
         return integrity_problems

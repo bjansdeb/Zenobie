@@ -370,7 +370,7 @@ class PremisObjects:
     rights : dict[str, Right] = field(default_factory=dict)
     
     #tri par path/uri
-    uris : list[str, Object] = field(default_factory=dict)
+    absolute_paths : list[str, Object] = field(default_factory=dict)
     
     def add_agent(self, agent):
         self.agents[agent.agentIdentifierValue] = agent
@@ -384,12 +384,11 @@ class PremisObjects:
     def add_object(self, object):
         self.objects[object.objectIdentifierValue] = object
     
-    def add_uri(self, uri, object):
-        self.uris[uri] = object.objectIdentifierValue
+    def add_absolute_path(self, abspath, object):
+        self.absolute_paths[object.objectIdentifierValue] = abspath
 
-    def adapt_uri(self, objects, new_uri): #à corriger
-        for object in objects.values():
-            self.uris[object.objectIdentifierValue] = new_uri
+    def adapt_absolute_path(self, new_abspath, object): 
+        self.uris[object.objectIdentifierValue] = new_abspath
 
     def get_uris(self):
         print(self.uris)
