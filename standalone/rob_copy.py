@@ -3,7 +3,6 @@ import datetime
 import hashlib
 import os
 import subprocess
-import sys
 import time
 import uuid
 
@@ -33,7 +32,7 @@ def main() :
             if role == "":
                 raise ValueError
             else :
-                print("Ok, so you are", role)
+                print("Ok, so you are an", role)
                 time.sleep(2)
                 break
 
@@ -103,7 +102,7 @@ def robo_copy(source: str, destination: str, log_repository: str, user: str, rol
 
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
-                    "/E", "/copy:DATSO", f"/log+:{log_repository}/transfert_report.txt", "/X", "/V", "/FP", "/TEE"], #copy_all changé en DASTO
+                    "/E", "/copy:DATS", f"/log+:{log_repository}/transfert_report.txt", "/X", "/V", "/FP", "/TEE"], #copy_all changé en DASTO puis DATS à cause NFTS
                     check=False)
     
     paths_source = get_relative_paths(source, log_repository, user, role)    
