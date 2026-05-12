@@ -53,7 +53,7 @@ def create_bay(user, project_n: str, registre) -> dict:
                 else : 
                     raise EmptyError    
             except EmptyError:
-                print("please, answeer by yes or no") 
+                log_it("info", "please, answeer by yes or no") 
 
     else : 
         os.mkdir(project)
@@ -143,13 +143,13 @@ def create_objects(rep, report_r, user, registre):
     for root, _, files in os.walk(rep):  #_ était dirs
         for file in files :
             f =os.path.join(root, file)
-            md5 = hash_calculator(f)
+            sha_256 = hash_calculator(f)
             relative_path = get_relative_path(f, rep) #f seul auparavant
             filename, file_extension = os.path.splitext(f)          
             
             obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", 
-                       contentLocationValue=relative_path, messageDigestAlgorithm="md5", 
-                       messageDigest=md5, originalName=filename)
+                       contentLocationValue=relative_path, messageDigestAlgorithm="sha 256", 
+                       messageDigest=sha_256, originalName=filename)
             
             event = Event(eventType="digital signature generation", eventDateTime=horodatage(), 
                           eventDetail=obj.messageDigest, eventOutcome="success")
@@ -160,10 +160,10 @@ def create_objects(rep, report_r, user, registre):
             
             registre.add_event(event)              
             registre.add_object(obj)
-            registre.add_absolute_path(obj, f)
+            registre.add_absolute_path(f, obj.objectIdentifierValue)
     #registre.get_uris()
 
-    write_report("source_manifest_md5.csv", report_r, type="hash", cible=registre)
+    write_report("source_manifest_sha256.csv", report_r, type="hash", cible=registre)
 
 def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     """
@@ -180,44 +180,20 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     paths_destination.clear()
 
     if integrity_problems :
-        write_report(integrity_problems, "hash_problems_with_originals.txt", report_r) # à améliorer
+        write_report("hash_problems_with_originals.txt", report_r, "integrity", integrity_problems) # à améliorer
         integrity_problems.clear()
 
     """deuxième itération avec les copies"""
     paths_destination = robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt", registre)
+    
+
     integrity_problems = verify_hashs_and_paths(paths_destination, registre)
     #paths_destination.clear()
 
     if integrity_problems :
-        write_report(integrity_problems, "hash_problems_with_copies.txt", report_r)
+        write_report("hash_problems_with_copies.txt", report_r, "integrity", integrity_problems)
         integrity_problems.clear()
 
-    
-    """
-    Match des hash de registre objects avec copies_hash_dict pour metre à jour l'emplacement des objets
-    """
-    #for root, dirs, files in os.walk(copies):
-    #registre.absolute_paths
-
-
-    for obj in registre.objects.values():
-        if obj.messageDigest in copies_hash_dict:
-            old_location =  obj.contentLocationValue
-            obj.contentLocationValue = copies_hash_dict[obj.messageDigest]
-            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="success", 
-                          eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue}")
-            obj.add_linking_event(event)
-            event.add_linking_object(obj, "outcome")
-            registre.add_event(event)           
-
-        else:
-            old_location = obj.contentLocationValue
-            event = Event(eventType="transfer", eventDateTime=horodatage(), eventOutcome="failure", 
-                          eventDetail=f"Transfer from {old_location} to {obj.contentLocationValue} has failed")
-            obj.add_linking_event(event)
-            event.add_linking_object(obj, "outcome")
-            registre.add_event(event)    
-            log_it("warning",f"warning, this object {obj} has a problematic check")
 
     write_report("moving_report.txt", report_r, "transfer", cible=registre )
 
@@ -236,7 +212,6 @@ def state_of_art(rep, reports, us, registre):
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
-        print(root, type(root))
         if os.path.isdir(root):
             repositories_number += 1
         
@@ -318,14 +293,14 @@ def dezip(copies_rep, registre):
     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
    
     if uncompliant_packs :
-        pat = "uncompliant_packs.txt"
+        packs_report = "uncompliant_packs.txt"
         with open(pat, "w+t", encoding="utf-8") as uncompliant_r:
             uncompliant_r.write("Uncompliant packs :")
             for pack in uncompliant_packs:
                 uncompliant_r.write(f"\n{pack}")
 
         log_it("info", f"There are packages not compliant with your format policy.")
-        log_it("info",f"You can check the list here : {pat}")
+        log_it("info",f"You can check the list here : {packs_report}")
         log_it("info",f"Please, note that some of these packs may contain dangerous links")
         answeer= input("May I remove them (yes/no)? :")
         while True :
@@ -372,12 +347,10 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack):
             
             """Détecte les symlinks en bas niveau, Python 3.11.19 n'offre pas de fonction pour ça avec zipfile"""
             mode = entry.external_attr >> 16
-            print(mode)
             
             if stat.S_ISLNK(mode):
                 uncomp_pack.append(old_path)
                 return
-            print("external attributes", entry.external_attr)
             
         if compressed_size >= MAX_TOTAL_SIZE or files_number >= MAX_FILES:
             log_it("warning",f"{old_path} has a size above the limits with  {compressed_size} bytes, {files_number}")
@@ -601,61 +574,59 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
 """-----------------------------------------------"""
 
 def hash_calculator(source):
-    # sha_256 = hashlib.sha256() #à décocher si on veut cet algo à la place de md5
-    md5 = hashlib.md5()
-    #print(source)
+    sha_256 = hashlib.sha256()
     with open(source, 'rb') as file:
         while chunk := file.read(8192):
-            md5.update(chunk)
-    return md5.hexdigest()
-
-# hash_match(registre, originals_hash_dict, "hash_problems_with_originals.txt", report_r)
-
-# def hash_match(source: object, cible: dict, report_name: str, report_r):
-#     files_with_hash_problem = {}
-#     for obj in source.objects.values():
-#         if obj.messageDigest in cible:
-#             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-#             eventDetail= f"{cible[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
-#             source.add_event(event)
-#         else :
-#             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-#             eventDetail= f"{cible[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
-#             source.add_event(event)
-#             files_with_hash_problem[obj.messageDigest] = cible[obj.messageDigest]
-            
-#     if files_with_hash_problem :
-#         write_report(report_name, report_r, "unmatched_hash", files_with_hash_problem)
-#         log_it("warning", f"There are original files inside the originals repository that encounter integrity problems. You can check these here : {report_r}/hash_problems_with_originals.txt")
-#         files_with_hash_problem.clear()
+            sha_256.update(chunk)
+    return sha_256.hexdigest()
 
 def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->dict:
     """ Vérifie les hashs et les chemins récoltés dans paths_destination avec les chemins et hash contenus dans les objets de métadonnées"""
     
-    integrity_problems ={}
-    
-    for obj in registre.objects.values():
-        if obj.messageDigest in paths_destination:
-            if obj.contentLocationValue == paths_destination[obj.messageDigest]:
-                event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-                eventDetail= f"{paths_destination[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
-                registre.add_event(event)
-                continue
+    integrity_problems = {}
+    #vérifier paths source et destination (arrays)
+    for rel_path in paths_destination:
+        for obj in registre.objects.values():
+            print(rel_path)
+            if rel_path == obj.contentLocationValue:
+                if paths_destination[rel_path][0] == obj.messageDigest:
+                    event = Event(eventType="transfer", eventOutcome="success", eventDetail=f"{obj.contentLocationValue} succesfully transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
+                    registre.add_event(event)
+                    continue
+                else :
+                    integrity_problems[paths_destination[rel_path]] = f"Hash {paths_destination[rel_path][0]} does not match any path in the source repository"
+                    event = Event(eventType="transfer", eventOutcome="failure", eventDetail=f"{obj.contentLocationValue} not transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
+                    registre.add_event(event)
+            else :
+                integrity_problems[paths_destination[rel_path]] = f"{rel_path} has not equivalent path in the source repository"
 
-            else:
-                event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-                eventDetail= f"{paths_destination[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
-                registre.add_event(event)
-                integrity_problems[paths_destination[obj.messageDigest]] = f"Hash {paths_destination[obj.messageDigest]} does not match any path in the source repository"
-        else:
-            integrity_problems[paths_destination[obj.messageDigest]] = f"{obj.messageDigest} has not equivalent path in the source repository"
-    
-    if integrity_problems:
-        log_it("warning", "There are integrity problems with some displaced files")
-        return integrity_problems
+    return integrity_problems
 
-    else:
-        log_it("info", "integrity check done without problems")        
+
+    # integrity_problems ={}
+    
+    # for obj in registre.objects.values():
+    #     if obj.messageDigest in paths_destination:
+    #         if obj.contentLocationValue == paths_destination[obj.messageDigest]:
+    #             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+    #             eventDetail= f"{paths_destination[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
+    #             registre.add_event(event)
+    #             continue
+
+    #         else:
+    #             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
+    #             eventDetail= f"{paths_destination[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
+    #             registre.add_event(event)
+    #             integrity_problems[paths_destination[obj.messageDigest]] = f"Hash {paths_destination[obj.messageDigest]} does not match any path in the source repository"
+    #     else:
+    #         integrity_problems[paths_destination[obj.messageDigest]] = f"{obj.messageDigest} has not equivalent path in the source repository"
+    
+    # if integrity_problems:
+    #     log_it("warning", "There are integrity problems with some displaced files")
+    #     return integrity_problems
+
+    # else:
+    #     log_it("info", "integrity check done without problems")        
 
 
 def horodatage():
@@ -707,7 +678,7 @@ def verify_collision(n_path):
 
 def is_safe_path(base_dir: Path, requested_path: str) -> bool:
     #https://medium.com/@contactomyna/securing-zip-file-operations-understanding-and-preventing-path-traversal-attacks-74d79f696c46
-    """Ensure file operations occur within the intended directory"""
+    """S'assure que les opérations se passent dans le bon fichier"""
     try:
        base_dir = Path(base_dir).resolve()
        target_path = Path(base_dir, requested_path).resolve()
@@ -719,8 +690,8 @@ def get_relative_path(child_path: str, absolute_parent_path: str) -> str:
     """Calcule le chemin relatif pour un chemin individuel donné à partir du répertoire parent absolu"""
     child = Path(child_path)
     parent = Path(fr'{absolute_parent_path}')
-    path = parent.name / child.relative_to(parent)
-    return path
+    path = parent.name / child.relative_to(parent) #.as_posix()
+    return path #.as_posix()
 
 def get_relative_paths(source : str) -> dict:
     """Calcule le chemin relatif pour un répertoire entier et les place dans un array avec leur hash comme key"""
@@ -732,7 +703,8 @@ def get_relative_paths(source : str) -> dict:
             p = Path(filename)
             source_p = Path(fr'{source}')
             hash_output = hash_calculator(filename)
-            paths_array[hash_output] = source_p.name / p.relative_to(source_p)
+            rel_path = str(source_p.name / p.relative_to(source_p)) #as_posix
+            paths_array[rel_path] = (hash_output, filename)
     return paths_array
 
 def serialize(object):

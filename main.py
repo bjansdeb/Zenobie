@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from errors import EmptyError
 from log import log_it
 from models import Agent, Event, Object, Mets, PremisObjects, State
@@ -57,6 +58,7 @@ def main():
                 break
             elif answeer == "no":
                 log_it("info", "ok, we continue without dezipping repositories")
+                time.sleep(2)
                 break
             else :
                 raise EmptyError            
@@ -71,6 +73,7 @@ def main():
                 break
             elif answeer == "no":
                 log_it("info","Ok, we continue without removing the empty repositories")
+                time.sleep(2)
                 break
         except EmptyError:
             log_it("warning","Please, answeer by yes or no ")
@@ -83,12 +86,14 @@ def main():
                 break
             elif answeer == "no":
                 log_it("info","Ok, we continue without removing the forbidden chars")
+                time.sleep(2)                
                 break                    
         except EmptyError:
             log_it("warning","Please, answeer by yes or no ")  
 
     log_it("info", "The process is almost finished. We are going to look to the formats used in this directrory with DROID. " \
-    "Please, not that some formats may be forbidden by your formats policy")
+    "Please, note that some formats may be forbidden by your formats policy")
+    time.sleep(2)
     droid_check(copies_repository, reports, registre)
     write_report("events_report.txt", reports, type="event", cible=registre)
     

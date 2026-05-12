@@ -1,6 +1,5 @@
 import logging
 import time
-
 logger = logging.getLogger(__name__)
 console_handler = logging.StreamHandler()
 file_handler = logging.FileHandler("zenobie.log", mode="w", encoding="utf-8")
@@ -20,12 +19,14 @@ def log_it(type, text):
 
     match type:
         case "debug":
+            time.sleep(1)
             return logger.debug(text)
         case "info":
+            time.sleep(1)
             return logger.info(text)
         case "warning":
+            time.sleep(1)
             return logger.warning(text)
         case "error":
-            return logger.warning(text)
-               
-    time.sleep(2)
+            time.sleep(1)
+            return logger.warning(text) 

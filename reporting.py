@@ -4,7 +4,7 @@ from log import log_it
 
 
 
-def write_report(file_name: str, path: str, type: str, cible: object= None):
+def write_report(file_name: str, path: str, type: str, cible: object | dict | None = None):
     """
     Docstring for write_report
     Function d'écriture des rapports
@@ -30,6 +30,14 @@ def write_report(file_name: str, path: str, type: str, cible: object= None):
                     writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
             log_it("info",f"Hash report done, see {file}")
 
+        case "integrity":
+            with open(file, "w+t", encoding="utf-8") as integrity_r:
+                integrity_r.write("-------------")       
+                integrity_r.write(f"\nIntegrity report")
+                for problems in cible:            
+                    integrity_r.write(f"\n{problems}")            
+        
+        
         case "unmatched_hash":
             with open(file, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']
@@ -80,7 +88,9 @@ def write_report(file_name: str, path: str, type: str, cible: object= None):
         
         case "transfer":
             with open(file, "w+t", encoding="utf-8") as transf_r:
-                transf_r.write(f"Transfert report")
+                transf_r.write("-----------")
+                transf_r.write(f"\nTransfert report")
+
                 for event in cible.events.values():
                     if event.eventType == "transfer":
                         transf_r.write(f"\nEvent id type: {event.eventIdentifierType}")

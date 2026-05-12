@@ -385,10 +385,10 @@ class PremisObjects:
         self.objects[object.objectIdentifierValue] = object
     
     def add_absolute_path(self, abspath, object):
-        self.absolute_paths[object.objectIdentifierValue] = abspath
+        self.absolute_paths[object] = abspath
 
     def adapt_absolute_path(self, new_abspath, object): 
-        self.uris[object.objectIdentifierValue] = new_abspath
+        self.absolute_paths[object] = new_abspath
 
     def get_uris(self):
         print(self.uris)
