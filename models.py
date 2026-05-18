@@ -127,6 +127,7 @@ class State:
     most_recent_modified_file: str | None = None  
     most_recent_modified_time:str | None = None
     list_dir : Dict[str, Dict[str, List[str]]] = field(default_factory=dict)
+    extenstions : List[str] = field(default_factory=list)
 """
 Object basé sur Object dans Premis
 """

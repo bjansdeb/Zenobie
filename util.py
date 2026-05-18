@@ -180,7 +180,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     paths_destination.clear()
 
     if integrity_problems :
-        write_report("hash_problems_with_originals.txt", report_r, "integrity", integrity_problems) # à améliorer
+        write_report("hash_problems_with_originals.txt", report_r, "integrity", dict_cible=integrity_problems) 
         integrity_problems.clear()
 
     """deuxième itération avec les copies"""
@@ -191,7 +191,7 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     #paths_destination.clear()
 
     if integrity_problems :
-        write_report("hash_problems_with_copies.txt", report_r, "integrity", integrity_problems)
+        write_report("hash_problems_with_copies.txt", report_r, "integrity", dict_cible=integrity_problems)
         integrity_problems.clear()
 
 
@@ -209,6 +209,7 @@ def state_of_art(rep, reports, us, registre):
     state_report = State(rep, us.agentName, us.note, date=horodatage())
     tree = {}
     all_paths = [] #pour calculer le plus anciens/récents
+    all_extensions = []
     for root, dirs, files in os.walk(rep):
         current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
@@ -220,11 +221,15 @@ def state_of_art(rep, reports, us, registre):
             "files": files
         }
         for file in files:
-            fp = os.path.join(root, file)        
-            full_size += os.path.getsize(fp)
+            file_path = os.path.join(root, file)        
+            full_size += os.path.getsize(file_path)
+            _, file_extension = os.path.splitext(file_path)
+            if file_extension.lower() not in all_extensions:
+                all_extensions.append(file_extension.lower())
+
             if os.path.isfile(file):
                 files_number += 1
-            all_paths.append(fp)
+            all_paths.append(file_path)
 
     if all_paths:
         oldest_created_f = min(all_paths, key= os.path.getctime)
@@ -250,6 +255,7 @@ def state_of_art(rep, reports, us, registre):
     state_report.most_recent_modified_time = most_rmt
     state_report.list_dir = tree
     state_report.depth = max_depth
+    state_report.extensions = all_extensions
     registre.add_event(Event(eventType="appraisal", eventDateTime=horodatage(), eventDetail= state_report, eventOutcome="success"))
     write_report("initial_audit_report.txt", reports, "state", cible= state_report)
     log_it("info", "Audit succesfully finished")
@@ -584,11 +590,12 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
     """ Vérifie les hashs et les chemins récoltés dans paths_destination avec les chemins et hash contenus dans les objets de métadonnées"""
     
     integrity_problems = {}
-    #vérifier paths source et destination (arrays)
+    obj_relative_paths = [obj.contentLocationValue for obj in registre.objects.values()]
+
     for rel_path in paths_destination:
-        for obj in registre.objects.values():
-            print(rel_path)
-            if rel_path == obj.contentLocationValue:
+        for obj in registre.objects:
+            if rel_path in obj_relative_paths:
+                print(paths_destination[rel_path][0], obj.messageDigest)
                 if paths_destination[rel_path][0] == obj.messageDigest:
                     event = Event(eventType="transfer", eventOutcome="success", eventDetail=f"{obj.contentLocationValue} succesfully transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
                     registre.add_event(event)
@@ -597,9 +604,10 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
                     integrity_problems[paths_destination[rel_path]] = f"Hash {paths_destination[rel_path][0]} does not match any path in the source repository"
                     event = Event(eventType="transfer", eventOutcome="failure", eventDetail=f"{obj.contentLocationValue} not transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
                     registre.add_event(event)
-            else :
+            else:
                 integrity_problems[paths_destination[rel_path]] = f"{rel_path} has not equivalent path in the source repository"
 
+    print("here is the integrity prob", integrity_problems)
     return integrity_problems
 
 

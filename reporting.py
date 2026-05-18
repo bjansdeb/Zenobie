@@ -1,10 +1,11 @@
 import csv
 import os
 from log import log_it
+from dataclasses import fields
 
 
 
-def write_report(file_name: str, path: str, type: str, cible: object | dict | None = None):
+def write_report(file_name: str, path: str, type: str, cible: object = None, dict_cible: dict = None):
     """
     Docstring for write_report
     Function d'écriture des rapports
@@ -34,7 +35,7 @@ def write_report(file_name: str, path: str, type: str, cible: object | dict | No
             with open(file, "w+t", encoding="utf-8") as integrity_r:
                 integrity_r.write("-------------")       
                 integrity_r.write(f"\nIntegrity report")
-                for problems in cible:            
+                for problems in dict_cible:            
                     integrity_r.write(f"\n{problems}")            
         
         
@@ -59,7 +60,11 @@ def write_report(file_name: str, path: str, type: str, cible: object | dict | No
                 state_r.write(f"\nOldest created file : {cible.oldest_created_file} at {cible.oldest_created_time}")
                 state_r.write(f"\nMost recent created file : {cible.most_recent_created_file} at {cible.most_recent_created_time}")
                 state_r.write(f"\nOldest modified file : {cible.oldest_modified_file} at {cible.oldest_modified_time}")
-                state_r.write(f"\nMost recent modified file : {cible.most_recent_modified_file} at {cible.most_recent_modified_time}")                
+                state_r.write(f"\nMost recent modified file : {cible.most_recent_modified_file} at {cible.most_recent_modified_time}")
+                if cible.extensions is not None :
+                    state_r.write(f"\nExtensions :")
+                    for extension in cible.extensions : 
+                        state_r.write(f"{extension} ;")
                 state_r.write(f"\nReport done with Zenobie at {cible.date} by {cible.author} ({cible.role})")
                 state_r.write(f"\nContent:")
                 for path, content in cible.list_dir.items():
@@ -112,7 +117,16 @@ def write_report(file_name: str, path: str, type: str, cible: object | dict | No
 
             log_it("info",f"Rename report done, see {file}")
         
+
         # case "uncompliant_zip":
         #     with open(file, "w+t", encoding="utf-8") as uncompliant_r:
         #         for packs in uncompliants_packages:
         #             uncompliant_r.write(f"\nEvent id type: {event.eventIdentifierType}")
+
+        case "objects":
+            with open(file, 'w', newline='', encoding='utf-8') as f:
+                attributes = [field.name for field in fields(cible)]
+                writer = csv.DictWriter(f, fieldnames=attributes)
+                writer.writeheader()
+                for object in cible.objects.values() :
+                    writer.writerow({'objectIdentifierType': {object.IdentifierType}, 'objectIdentifierValue': {object.objectIdentifierValue}})
