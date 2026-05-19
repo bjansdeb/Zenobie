@@ -180,20 +180,26 @@ def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
     paths_destination.clear()
 
     if integrity_problems :
+        log_it("warning", "there were integrity problems during the migration to the originals repository. Take a look at the reports")
         write_report("hash_problems_with_originals.txt", report_r, "integrity", dict_cible=integrity_problems) 
         integrity_problems.clear()
+    else:
+        log_it("info", "hash and path verification done without problems for originals repository")
+
 
     """deuxième itération avec les copies"""
     paths_destination = robo_copy(rep, copies, report_r, "robocopy_transfer_copies_report.txt", registre)
     
 
     integrity_problems = verify_hashs_and_paths(paths_destination, registre)
-    #paths_destination.clear()
+    paths_destination.clear()
 
     if integrity_problems :
+        log_it("warning", "there were integrity problems during the migration to the sorting repository. Take a look at the reports")
         write_report("hash_problems_with_copies.txt", report_r, "integrity", dict_cible=integrity_problems)
         integrity_problems.clear()
-
+    else:
+        log_it("info", "hash and path verification done without problems for sorting repository")
 
     write_report("moving_report.txt", report_r, "transfer", cible=registre )
 
@@ -305,7 +311,7 @@ def dezip(copies_rep, registre):
             for pack in uncompliant_packs:
                 uncompliant_r.write(f"\n{pack}")
 
-        log_it("info", f"There are packages not compliant with your format policy.")
+        log_it("info",f"There are packages not compliant with your format policy.")
         log_it("info",f"You can check the list here : {packs_report}")
         log_it("info",f"Please, note that some of these packs may contain dangerous links")
         answeer= input("May I remove them (yes/no)? :")
@@ -368,7 +374,7 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack):
         if os.path.isdir(file_n):
             new_path = verify_collision(file_n)
         os.mkdir(new_path)
-        log_it("info",f"New reposit created during dezip process {new_path}")
+        log_it("info", f"New reposit created during dezip process {new_path}")
 
         zip.extractall(new_path)
         log_it("info", f"{old_path} extracted")
@@ -588,53 +594,29 @@ def hash_calculator(source):
 
 def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->dict:
     """ Vérifie les hashs et les chemins récoltés dans paths_destination avec les chemins et hash contenus dans les objets de métadonnées"""
-    
+    log_it("info", "lauching hashs and paths verification")
     integrity_problems = {}
-    obj_relative_paths = [obj.contentLocationValue for obj in registre.objects.values()]
+    obj_relative_paths = {}
+    
+    for obj in registre.objects.values():
+        obj_relative_paths[obj.contentLocationValue] = obj.messageDigest
 
     for rel_path in paths_destination:
-        for obj in registre.objects:
-            if rel_path in obj_relative_paths:
-                print(paths_destination[rel_path][0], obj.messageDigest)
-                if paths_destination[rel_path][0] == obj.messageDigest:
-                    event = Event(eventType="transfer", eventOutcome="success", eventDetail=f"{obj.contentLocationValue} succesfully transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
-                    registre.add_event(event)
-                    continue
-                else :
-                    integrity_problems[paths_destination[rel_path]] = f"Hash {paths_destination[rel_path][0]} does not match any path in the source repository"
-                    event = Event(eventType="transfer", eventOutcome="failure", eventDetail=f"{obj.contentLocationValue} not transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
-                    registre.add_event(event)
-            else:
-                integrity_problems[paths_destination[rel_path]] = f"{rel_path} has not equivalent path in the source repository"
-
-    print("here is the integrity prob", integrity_problems)
-    return integrity_problems
-
-
-    # integrity_problems ={}
+        if rel_path in obj_relative_paths.keys():
+            if paths_destination[rel_path][0] == obj_relative_paths.get(rel_path):
+                event = Event(eventType="transfer", eventOutcome="success", eventDetail=f"{obj_relative_paths.get(rel_path)} succesfully transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
+                registre.add_event(event)
+                continue
+            else :
+                integrity_problems[paths_destination[rel_path]] = f"Hash {paths_destination[rel_path][0]} does not match any path in the source repository"
+                event = Event(eventType="transfer", eventOutcome="failure", eventDetail=f"{obj_relative_paths.get(rel_path)} not transfered to {paths_destination[rel_path][1]}", eventDateTime=horodatage())
+                registre.add_event(event)
+        else:
+            integrity_problems[paths_destination[rel_path]] = f"{rel_path} has not equivalent path in the source repository"
     
-    # for obj in registre.objects.values():
-    #     if obj.messageDigest in paths_destination:
-    #         if obj.contentLocationValue == paths_destination[obj.messageDigest]:
-    #             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-    #             eventDetail= f"{paths_destination[obj.messageDigest]} is conform. {obj.messageDigest} matches", eventOutcome="success")
-    #             registre.add_event(event)
-    #             continue
+    log_it("info", "hashs and paths verification done")
 
-    #         else:
-    #             event = Event(eventType="digital signature validation", eventDateTime=horodatage(), 
-    #             eventDetail= f"{paths_destination[obj.messageDigest]} is not conform. {obj.messageDigest} does not match", eventOutcome="failure")
-    #             registre.add_event(event)
-    #             integrity_problems[paths_destination[obj.messageDigest]] = f"Hash {paths_destination[obj.messageDigest]} does not match any path in the source repository"
-    #     else:
-    #         integrity_problems[paths_destination[obj.messageDigest]] = f"{obj.messageDigest} has not equivalent path in the source repository"
-    
-    # if integrity_problems:
-    #     log_it("warning", "There are integrity problems with some displaced files")
-    #     return integrity_problems
-
-    # else:
-    #     log_it("info", "integrity check done without problems")        
+    return integrity_problems     
 
 
 def horodatage():
@@ -698,7 +680,7 @@ def get_relative_path(child_path: str, absolute_parent_path: str) -> str:
     """Calcule le chemin relatif pour un chemin individuel donné à partir du répertoire parent absolu"""
     child = Path(child_path)
     parent = Path(fr'{absolute_parent_path}')
-    path = parent.name / child.relative_to(parent) #.as_posix()
+    path = str(parent.name / child.relative_to(parent)) #.as_posix()
     return path #.as_posix()
 
 def get_relative_paths(source : str) -> dict:

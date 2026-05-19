@@ -203,7 +203,7 @@ class Object:
                 linkingEventIdentifierValue=event.eventIdentifierValue
             )
         )
-
+    
 
 
 #enfants de Object, pour les trois types conseillés par PREMIS
