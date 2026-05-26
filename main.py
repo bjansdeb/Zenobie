@@ -95,8 +95,10 @@ def main():
     "Please, note that some formats may be forbidden by your formats policy")
     time.sleep(2)
     droid_check(copies_repository, reports, registre)
+    assign_droid_data(reports, copies_repository, registre)
+
     write_report("events_report.txt", reports, type="event", cible=registre)
-    write_report("objects.csv", reports, type="event", cible=registre )
+    write_report("objects.csv", reports, type="objects", cible=registre )
 
     while True:
         try:

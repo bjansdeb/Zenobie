@@ -474,17 +474,25 @@ def droid_check(rep, reports, registre):
         "Please install it and retry")
 
 
-def get_droid_data():
-    if os.path.isfile("droid_report.csv"):
-        with open("droid_report.csv", "r", encoding="utf-8", newline="") as f:
-            reader = csv.DictReader(f)
+def assign_droid_data(reports, copies_rep, registre):
+    """Assigne les métadonnées extraites via DROID aux objets de métadonnées"""
+    droid_file_path = os.path.join(reports, "droid_report.csv")
 
-            for row in reader:
-                print(row.get("NAME"))
-                row.get("FILE_PATH")
-                row.get("PUID")
-                print(row.get("MIME_TYPE"))
-                print(row.get("HASH"))
+    if os.path.isfile(droid_file_path):
+        with open(droid_file_path, "r", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f)
+            for row in writer:  
+                rel_path = get_relative_path(row.get("FILE_PATH"), copies_rep)
+                writer.writerow({"FILE_PATH" : rel_path})
+                print(row.get("FILE_PATH"))
+                # print(relative_path)
+
+            # for row in reader:
+            #     print(row.get("NAME"))
+            #     row.get("FILE_PATH")
+            #     row.get("PUID")
+            #     print(row.get("MIME_TYPE"))
+            #     print(row.get("HASH"))
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
 
@@ -500,7 +508,7 @@ def remove_empty(copies_rep, report_r, registre):
 
     removed = 0 
     initial_root = abs_path
-    for root, dirs, files in os.walk(abs_path, topdown=False):
+    for root, _, files in os.walk(abs_path, topdown=False):
         try:
             if root == initial_root:
                 continue

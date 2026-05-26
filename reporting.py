@@ -128,5 +128,5 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
                 attributes = [field.name for field in fields(cible)]
                 writer = csv.DictWriter(f, fieldnames=attributes)
                 writer.writeheader()
-                for object in cible.objects.values() :
-                    writer.writerow({'objectIdentifierType': {object.IdentifierType}, 'objectIdentifierValue': {object.objectIdentifierValue}})
+                # for object in cible.objects.values() :
+                #     writer.writerow({'objectIdentifierType': {object.objectIdentifierType}, 'objectIdentifierValue': {object.objectIdentifierValue}})
