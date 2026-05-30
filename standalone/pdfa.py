@@ -105,6 +105,7 @@ def main():
         print("Process done")    
 
     elif selected_module == "repository":
+        CONVERTIBLE_EXT = {".doc", ".docx"}
         try:
             while True:
                 repository_path = str(input('repository to convert:'))
@@ -114,7 +115,13 @@ def main():
                 pass
         libre_office_path = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
         input_repository = Path(fr"{repository_path}")
-    
+        for root, _, files in os.walk(input_repository):  #_ était dirs
+            for file in files :
+                file_path =os.path.join(root, file)
+                filename, extension = os.path.splitext(file_path)
+                if extension in CONVERTIBLE_EXT:
+                    ...
+
 
 
 def write_report(input_file, role, user):
