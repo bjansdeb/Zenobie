@@ -13,7 +13,8 @@ def main():
     time.sleep(3)
     user = ""
     role = ""
-
+    institution = ""
+    selected_module = ""
     while True : 
         try:
             user = str(input("Hello buddy, what's your name ? :"))
@@ -24,10 +25,18 @@ def main():
 
         except ValueError:
             pass
-
+    while True:
+        try:
+            institution = str(input(f"Great {user}, what is the name of your instution ? :"))
+            if institution == "":
+                raise ValueError
+            else :
+                break
+        except ValueError:
+            pass
     while True:
         try: 
-            role = str(input(f"Super {user}. Now what's your role at Carhif (archivist, librarian...): "))
+            role = str(input(f"Super! Now what's your role at {institution} (archivist, librarian...) ? : "))
             if role == "":
                 raise ValueError
             else :
@@ -39,51 +48,74 @@ def main():
             pass
     try:
         while True:
-            answeer = str(input('file to convert:'))
-            break
+            selected_module = str(input('Do you want to convert a file or multiple files inside a repository ? (file/repository):'))
+            if selected_module == "file" or "repository":
+                break
+            else :
+                raise ValueError
     except FileNotFoundError:
             print("File not found, retry")
-            pass
+            pass    
     
-    libre_office_path = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
-    input_file = Path(fr"{answeer}")
-    ouput_dir = Path(r"C:\Users\bjans\Desktop")
+    if selected_module == "file":
+        try:
+            while True:
+                file_path = str(input('file to convert:'))
+                break
+        except FileNotFoundError:
+                print("File not found, retry")
+                pass
+        
+        libre_office_path = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
+        input_file = Path(fr"{file_path}")
+        ouput_dir = Path(r"C:\Users\bjans\Desktop")
 
-    options =  {
-    "SelectPdfVersion": {
-        "type": "long",
-        "value": "3" #3: PDF/A-3b
-    },
-    "UseTaggedPDF": {
-        "type": "boolean",
-        "value": "true"
-    },
-    "EmbedStandardFonts": {
-        "type": "boolean",
-        "value": "true"
-    },
-    "ExportBookmarks": {
-        "type": "boolean",
-        "value": "true"
-    },
-    "ReduceImageResolution": {
-        "type": "boolean",
-        "value": "false"
-    },
-    "Quality": {
-        "type": "long",
-        "value": "100"
+        options =  {
+        "SelectPdfVersion": {
+            "type": "long",
+            "value": "3" #3: PDF/A-3b
+        },
+        "UseTaggedPDF": {
+            "type": "boolean",
+            "value": "true"
+        },
+        "EmbedStandardFonts": {
+            "type": "boolean",
+            "value": "true"
+        },
+        "ExportBookmarks": {
+            "type": "boolean",
+            "value": "true"
+        },
+        "ReduceImageResolution": {
+            "type": "boolean",
+            "value": "false"
+        },
+        "Quality": {
+            "type": "long",
+            "value": "100"
+        }
     }
-}
+        
+        pdf_options = (f'pdf:writer_pdf_Export:{options}')
+        result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
+        #-o headless following files for editing, regardless whether they are templates or not.
+        write_report(input_file, role, user)
+        print(result.stderr, result.stdout)
+        print("Process done")    
+
+    elif selected_module == "repository":
+        try:
+            while True:
+                repository_path = str(input('repository to convert:'))
+                break
+        except NotADirectoryError:
+                print("Repository not found, retry")
+                pass
+        libre_office_path = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
+        input_repository = Path(fr"{repository_path}")
     
-    pdf_options = (f'pdf:writer_pdf_Export:{options}')
-    result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
-    #-o headless following files for editing, regardless whether they are templates or not.
-    write_report(input_file, role, user)
-    print(result.stderr, result.stdout)
 
-
-    print("Process done")
 
 def write_report(input_file, role, user):
     log_repository= "/"
