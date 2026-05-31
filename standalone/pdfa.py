@@ -1,6 +1,6 @@
 import subprocess
 from pathlib import Path
-from datetime import datetime
+import datetime
 import os
 import subprocess
 import uuid
@@ -37,7 +37,7 @@ libre_office_path = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
 
 
 def main():
-    print("Robocopy launched")
+    print("PDFA launched")
     time.sleep(1)
     print("Note : you may quit the script at any time doing crtl+c")
     time.sleep(3)
@@ -57,7 +57,7 @@ def main():
             pass
     while True:
         try:
-            institution = str(input(f"Great {user}, what is the name of your instution ? :"))
+            institution = str(input(f"Great {user}, what is the name of your institution ? :"))
             if institution == "":
                 raise ValueError
             else :
@@ -76,33 +76,27 @@ def main():
 
         except ValueError:
             pass
-    # while True:
-    #     try:
-    #         log_repository = fr'{str(input("Path report (repository where to put your reports, f.i. : C:/archives/report):"))}'
-    #         if not os.path.exists(log_repository):
-    #             raise ValueError
-    #         else:
-    #             break
-    #     except ValueError:
-    #         print('This path does not exist. Please retry')
-    #         pass     
-    try:
-        while True:
-            selected_module = str(input('Do you want to convert a file or multiple files inside a repository ? (file/repository):').lower())
-            if selected_module == "file" or "repository":
-                break
-            else :
-                raise ValueError
-    except FileNotFoundError:
-            print("You must answeer by file or repository, retry")
-            pass    
+
+    while True:
+            try:
+                selected_module = str(input('Do you want to convert a file or multiple files inside a repository ? (file/repository):').lower())
+                if selected_module == "file" or selected_module == "repository":
+                    break
+                else :
+                    raise ValueError
+            except ValueError:
+                    print("You must answeer by file or repository, retry")
+                    pass    
     
     if selected_module == "file":
-        try:
-            while True:
+        while True:
+            try:
                 file_path = str(input('file to convert:'))
-                break
-        except FileNotFoundError:
+                if os.path.isfile(file_path):
+                    break
+                else:
+                    raise FileNotFoundError
+            except FileNotFoundError:
                 print("File not found, retry")
                 pass
         
@@ -117,29 +111,30 @@ def main():
 
     elif selected_module == "repository":
         CONVERTIBLE_EXT = {".doc", ".docx"}
-        try:
-            while True:
+        while True:
+            try:
                 repository_path = str(input('Repository to convert:'))
                 break
-        except NotADirectoryError:
-                print("Repository not found, retry")
-                pass
+            except NotADirectoryError:
+                    print("Repository not found, retry")
+                    pass
         libre_office_path = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
         input_repository = Path(fr"{repository_path}")
+        converted_files = {}
         for root, _, files in os.walk(input_repository):  #_ était dirs
             for file in files :
                 file_path =os.path.join(root, file)
                 _, extension = os.path.splitext(file_path)
                 if extension in CONVERTIBLE_EXT:
                     input_file = Path(fr"{file_path}")
-                    ouput_dir = Path(r"C:\Users\bjans\Desktop")
+                    ouput_dir = Path(fr"{root}") #Path(r"C:\Users\bjans\Desktop")
                     result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
-                    write_report(input_file, role, user, institution)
+                    converted_files[str(input_file)] = horodatage()
+        write_report(converted_files, input_repository, role, user, institution)
 
+    print("process done")
 
-
-def write_report(input_file, role, user, institution):
-    log_repository= "/"
+def write_report(converted_files, log_repository, role, user, institution):
     # integrity_path = os.path.join(log_repository, "integrity_problems.txt")
     report_path = os.path.join(log_repository, "migrations_report.txt")
     with open(report_path,"w+t", encoding="utf-8") as pdfa_r:
@@ -147,11 +142,12 @@ def write_report(input_file, role, user, institution):
         pdfa_r.write(f"\nMigration report")
         pdfa_r.write(f"\nDone at {horodatage()} by {user}, {role} at {institution} using Python 3.10")       
         pdfa_r.write(f"\n--------")  
-        pdfa_r.write(f"\nEvent id type: migration")
-        pdfa_r.write(f"\nEvent id: {uuid.uuid1().hex}")
-        pdfa_r.write(f"\nEvent date time: {horodatage()}")
-        pdfa_r.write(f"\nEvent detail: {str(input_file)} has been converted into PDF/A-3B")                
-        pdfa_r.write(f"\nEvent outcome: success") 
+        for file in converted_files:
+            pdfa_r.write(f"\nEvent id type: migration")
+            pdfa_r.write(f"\nEvent id: {uuid.uuid1().hex}")
+            pdfa_r.write(f"\nEvent date time: {converted_files[file]}")
+            pdfa_r.write(f"\nEvent detail: {str(file)} has been converted into PDF/A-3B")                
+            pdfa_r.write(f"\nEvent outcome: success") 
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
