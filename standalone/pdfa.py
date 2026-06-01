@@ -45,6 +45,8 @@ def main():
     role = ""
     institution = ""
     selected_module = ""
+    converted_files = {}
+    non_converted_files = {}    
     while True : 
         try:
             user = str(input("Hello buddy, what's your name ? :"))
@@ -101,13 +103,23 @@ def main():
                 pass
         
         input_file = Path(fr"{file_path}")
-        ouput_dir = Path(r"C:\Users\bjans\Desktop")
-        result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, 
+        repository_path = os.path.dirname(file_path)
+        ouput_dir = Path(fr"{repository_path}")
+        if check_file_conflict(input_file, ouput_dir):
+            result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, 
                                  "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
+            if result.returncode == 0 :
+                converted_files[str(input_file)] = horodatage()
+            elif result.returncode != 0 :
+                non_converted_files[str(input_file)] = horodatage()
+        else :
+            non_converted_files[str(input_file)] = horodatage()
+
         #-o headless following files for editing, regardless whether they are templates or not.
-        write_report(input_file, role, user)
-        print(result.stderr, result.stdout)
-        print("Process done")    
+        # if result.returncode == 0 :
+        write_report(converted_files, non_converted_files, repository_path, role, user, institution)
+
+        #converted_files, input_repository, role, user, institution
 
     elif selected_module == "repository":
         CONVERTIBLE_EXT = {".doc", ".docx"}
@@ -118,9 +130,7 @@ def main():
             except NotADirectoryError:
                     print("Repository not found, retry")
                     pass
-        libre_office_path = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
         input_repository = Path(fr"{repository_path}")
-        converted_files = {}
         for root, _, files in os.walk(input_repository):  #_ était dirs
             for file in files :
                 file_path =os.path.join(root, file)
@@ -129,18 +139,20 @@ def main():
                     input_file = Path(fr"{file_path}")
                     ouput_dir = Path(fr"{root}") #Path(r"C:\Users\bjans\Desktop")
                     result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
-                    converted_files[str(input_file)] = horodatage()
-        write_report(converted_files, input_repository, role, user, institution)
+                    if result.returncode == 0 :
+                        converted_files[str(input_file)] = horodatage()
+                    elif result.returncode != 0 :
+                        non_converted_files[str(input_file)] = horodatage()
+        write_report(converted_files, non_converted_files, input_repository, role, user, institution)
 
     print("process done")
 
-def write_report(converted_files, log_repository, role, user, institution):
-    # integrity_path = os.path.join(log_repository, "integrity_problems.txt")
+def write_report(converted_files, non_converted_files, log_repository, role, user, institution):
     report_path = os.path.join(log_repository, "migrations_report.txt")
     with open(report_path,"w+t", encoding="utf-8") as pdfa_r:
         pdfa_r.write("-------------")       
         pdfa_r.write(f"\nMigration report")
-        pdfa_r.write(f"\nDone at {horodatage()} by {user}, {role} at {institution} using Python 3.10")       
+        pdfa_r.write(f"\nDone at {horodatage()} by {user}, {role} at {institution} using Python 3.10 and Libre Office")       
         pdfa_r.write(f"\n--------")  
         for file in converted_files:
             pdfa_r.write(f"\nEvent id type: migration")
@@ -148,6 +160,29 @@ def write_report(converted_files, log_repository, role, user, institution):
             pdfa_r.write(f"\nEvent date time: {converted_files[file]}")
             pdfa_r.write(f"\nEvent detail: {str(file)} has been converted into PDF/A-3B")                
             pdfa_r.write(f"\nEvent outcome: success") 
+        for file in non_converted_files:
+            pdfa_r.write(f"\nEvent id type: migration")
+            pdfa_r.write(f"\nEvent id: {uuid.uuid1().hex}")
+            pdfa_r.write(f"\nEvent date time: {non_converted_files[file]}")
+            pdfa_r.write(f"\nEvent detail: {str(file)} has not been converted into PDF/A-3B")                
+            pdfa_r.write(f"\nEvent outcome: failure")        
+
+def check_file_conflict(input_file, output_repository):
+    target = output_repository / f"{input_file.stem}.pdf"
+    # filename, extension = os.split(input_file)
+    if target.exists():
+        return False
+    else:
+        return True
+    # for root, _, files in os.walk(input_repository):  #_ était dirs
+    #     for file in files :
+    #         filename = os.path.join(root, file)
+    #         if Path(filename) == input_file.with_suffix(".pdf"):
+    #             print("there is a problem")
+    #             return False
+            
+    # return True
+
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
