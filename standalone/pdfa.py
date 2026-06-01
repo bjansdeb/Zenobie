@@ -109,17 +109,14 @@ def main():
             result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, 
                                  "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
             if result.returncode == 0 :
-                converted_files[str(input_file)] = horodatage()
+                converted_files[str(input_file)] = f"was converted into PDF/A-3B - {horodatage()}"
             elif result.returncode != 0 :
-                non_converted_files[str(input_file)] = horodatage()
+                non_converted_files[str(input_file)] = f"was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
         else :
-            non_converted_files[str(input_file)] = horodatage()
+            non_converted_files[str(input_file)] = f"was not converted into PDF/A-3B because a file with the same name already exists - {horodatage()}"
 
-        #-o headless following files for editing, regardless whether they are templates or not.
-        # if result.returncode == 0 :
         write_report(converted_files, non_converted_files, repository_path, role, user, institution)
 
-        #converted_files, input_repository, role, user, institution
 
     elif selected_module == "repository":
         CONVERTIBLE_EXT = {".doc", ".docx"}
@@ -138,11 +135,21 @@ def main():
                 if extension in CONVERTIBLE_EXT:
                     input_file = Path(fr"{file_path}")
                     ouput_dir = Path(fr"{root}") #Path(r"C:\Users\bjans\Desktop")
-                    result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
-                    if result.returncode == 0 :
-                        converted_files[str(input_file)] = horodatage()
-                    elif result.returncode != 0 :
-                        non_converted_files[str(input_file)] = horodatage()
+                    # result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
+                    # if result.returncode == 0 :
+                    #     converted_files[str(input_file)] = horodatage()
+                    # elif result.returncode != 0 :
+                    #     non_converted_files[str(input_file)] = horodatage()
+                    if check_file_conflict(input_file, ouput_dir):
+                        result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, 
+                                            "--outdir", str(ouput_dir), str(input_file)], text=True, capture_output=True, check=True)
+                        if result.returncode == 0 :
+                            converted_files[str(input_file)] = f"was converted into PDF/A-3B - {horodatage()}"
+                        elif result.returncode != 0 :
+                            non_converted_files[str(input_file)] = f"was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
+                    else :
+                        non_converted_files[str(input_file)] = f"was not converted into PDF/A-3B because a file with the same name already exists - {horodatage()}"
+
         write_report(converted_files, non_converted_files, input_repository, role, user, institution)
 
     print("process done")
@@ -157,14 +164,14 @@ def write_report(converted_files, non_converted_files, log_repository, role, use
         for file in converted_files:
             pdfa_r.write(f"\nEvent id type: migration")
             pdfa_r.write(f"\nEvent id: {uuid.uuid1().hex}")
-            pdfa_r.write(f"\nEvent date time: {converted_files[file]}")
-            pdfa_r.write(f"\nEvent detail: {str(file)} has been converted into PDF/A-3B")                
+            pdfa_r.write(f"\nEvent date time: {horodatage()}")
+            pdfa_r.write(f"\nEvent detail: {str(file)} {converted_files[file]}")                
             pdfa_r.write(f"\nEvent outcome: success") 
         for file in non_converted_files:
             pdfa_r.write(f"\nEvent id type: migration")
             pdfa_r.write(f"\nEvent id: {uuid.uuid1().hex}")
-            pdfa_r.write(f"\nEvent date time: {non_converted_files[file]}")
-            pdfa_r.write(f"\nEvent detail: {str(file)} has not been converted into PDF/A-3B")                
+            pdfa_r.write(f"\nEvent date time: {horodatage()}")
+            pdfa_r.write(f"\nEvent detail: {str(file)} {non_converted_files[file]}")                
             pdfa_r.write(f"\nEvent outcome: failure")        
 
 def check_file_conflict(input_file, output_repository):
@@ -174,14 +181,6 @@ def check_file_conflict(input_file, output_repository):
         return False
     else:
         return True
-    # for root, _, files in os.walk(input_repository):  #_ était dirs
-    #     for file in files :
-    #         filename = os.path.join(root, file)
-    #         if Path(filename) == input_file.with_suffix(".pdf"):
-    #             print("there is a problem")
-    #             return False
-            
-    # return True
 
 
 def horodatage():
