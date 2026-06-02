@@ -101,7 +101,8 @@ def main():
             try:
                 file_path = str(input('file to convert:'))
                 if os.path.isfile(file_path):
-                    if file_path in CONVERTIBLE_EXT:
+                    _, extension = os.path.splitext(file_path)
+                    if extension.lower() in CONVERTIBLE_EXT:
                         print("converting file...")
                         break
                     else :
@@ -116,18 +117,18 @@ def main():
         
         input_file = Path(fr"{file_path}")
         repository_path = os.path.dirname(file_path)
-        rel_path_file = get_relative_path(input_file, report_path)
+        rel_path_file = get_relative_path(input_file, repository_path)
 
         ouput_dir = Path(fr"{repository_path}")
         if check_file_conflict(input_file, ouput_dir):
             result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, 
                                  "--outdir", str(ouput_dir), str(input_file), f"/log+:{ouput_dir}/libre_office_migration_report.txt"], text=True, capture_output=True, check=True)
             if result.returncode == 0 :
-                converted_files[str(rel_path_file)] = f"was converted into PDF/A-3B - {horodatage()}"
+                converted_files[str(f"{input_file.stem}.pdf")] = f"{str(rel_path_file)} was converted into PDF/A-3B - {horodatage()}"
             elif result.returncode != 0 :
-                non_converted_files[str(rel_path_file)] = f"was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
+                non_converted_files[str(input_file)] = f"{str(rel_path_file)} was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
         else :
-            non_converted_files[str(rel_path_file)] = f"was not converted into PDF/A-3B because a file with the same name already exists - {horodatage()}"
+            non_converted_files[str(input_file)] = f"{str(rel_path_file)} was not converted into PDF/A-3B because a file with the same name already exists - {horodatage()}"
 
     # write_report(converted_files, non_converted_files, repository_path, role, user, institution)
 
@@ -136,7 +137,7 @@ def main():
         while True:
             try:
                 repository_path = str(input('Repository to convert:'))
-                print("convertig repository...")
+                print("converting repository...")
                 break
             except NotADirectoryError:
                     print("Repository not found, retry")
@@ -154,11 +155,12 @@ def main():
                         result = subprocess.run([str(libre_office_path), "--headless", "--convert-to", pdf_options, 
                                             "--outdir", str(ouput_dir), str(input_file), f"/log+:{ouput_dir}/libre_office_migration_report.txt"], text=True, capture_output=True, check=True)
                         if result.returncode == 0 :
-                            converted_files[str(rel_path_file)] = f"was converted into PDF/A-3B - {horodatage()}"
+                            pdf_path = ouput_dir / f"{input_file.stem}.pdf"
+                            converted_files[str(pdf_path)] = f" {str(rel_path_file)} was converted into PDF/A-3B. His name is now {input_file.stem}.pdf - {horodatage()}"
                         elif result.returncode != 0 :
-                            non_converted_files[str(rel_path_file)] = f"was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
+                            non_converted_files[str(input_file)] = f"{str(rel_path_file)}was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
                     else :
-                        non_converted_files[str(rel_path_file)] = f"was not converted into PDF/A-3B because a file with the same name already exists - {horodatage()}"
+                        non_converted_files[str(input_file)] = f"{str(rel_path_file)} was not converted into PDF/A-3B because a file with the same name already exists - {horodatage()}"
 
     write_report(converted_files, non_converted_files, input_repository, role, user, institution)
 
@@ -166,16 +168,12 @@ def main():
     print("validating pdf/a...")
     time.sleep(2)
     validation_data = {}
-    for file in converted_files:
+    for pdf_path in converted_files:
         # if file.lower().endswith(".pdf"): 
-        path = os.path.join(root, file)
-        rel_path_file = get_relative_path(path, root)
-        validation_data[rel_path_file] = pdfa_validation(veraPDF_path, path)
-    print(validation_data)
+        validation_data[pdf_path] = pdfa_validation(veraPDF_path, pdf_path)
+
     report_path = os.path.join(input_repository, "PDFA_validation_report.json")
     with open (report_path, "w", encoding="utf-8") as validation_r :
-        validation_r.write("PDF/A validation report\n")
-        validation_r.write(f"Done by {user}, {role} at {institution}, on {horodatage()}, using Python 3.10 and veraPDF 1.30.1")
         json.dump(validation_data, validation_r, indent=3)
 
 
@@ -186,12 +184,12 @@ def main():
     for root, _, files, in os.walk(input_repository):
         for file in files :
             path = os.path.join(root, file)
-            sha_sum = hash_calulcator(path)
+            sha_sum = hash_calculator(path)
             rel_path_file = get_relative_path(path, root)
             sha_dict[rel_path_file] = sha_sum
 
     report_path = os.path.join(input_repository, "hash_report.json")
-    with open(report_path, "w") as f:
+    with open(report_path, "w", encoding="utf-8") as f:
         json.dump(sha_dict, f, indent=3)
 
     print("process done, you can close the script with crtl+c")
@@ -205,15 +203,15 @@ def write_report(converted_files, non_converted_files, log_repository, role, use
         pdfa_r.write(f"\n--------")  
         for file in converted_files:
             pdfa_r.write(f"\nEvent id type: migration")
-            pdfa_r.write(f"\nEvent id: {uuid.uuid1().hex}")
+            pdfa_r.write(f"\nEvent id: {uuid.uuid4().hex}")
             pdfa_r.write(f"\nEvent date time: {horodatage()}")
-            pdfa_r.write(f"\nEvent detail: {str(file)} {converted_files[file]}")                
+            pdfa_r.write(f"\nEvent detail: {converted_files[file]}")                
             pdfa_r.write(f"\nEvent outcome: success") 
         for file in non_converted_files:
             pdfa_r.write(f"\nEvent id type: migration")
-            pdfa_r.write(f"\nEvent id: {uuid.uuid1().hex}")
+            pdfa_r.write(f"\nEvent id: {uuid.uuid4().hex}")
             pdfa_r.write(f"\nEvent date time: {horodatage()}")
-            pdfa_r.write(f"\nEvent detail: {str(file)} {non_converted_files[file]}")                
+            pdfa_r.write(f"\nEvent detail: {non_converted_files[file]}")                
             pdfa_r.write(f"\nEvent outcome: failure")        
 
 def check_file_conflict(input_file, output_repository):
@@ -230,7 +228,7 @@ def get_relative_path(child_path: str, absolute_parent_path: str) -> str:
     path = str(parent.name / child.relative_to(parent)) #.as_posix()
     return path #.as_posix()
     
-def hash_calulcator(source):
+def hash_calculator(source):
     sha = hashlib.sha256()
     with open(source, 'rb') as file:
         while chunk := file.read(8192):
@@ -239,14 +237,9 @@ def hash_calulcator(source):
 
 def pdfa_validation(vera_path, source):
     #veraPDF 1.30.1
-    result = subprocess.run([str(vera_path), "-f", "3b", "--format", "text", str(source)], text=True, capture_output=True)
-    print(result.stdout, result.stderr)
-    return result.stdout
-    # valid = True
-    # if valid :
-    #     return True
-    # else :
-    #     return False
+    result = subprocess.run([str(vera_path), "-f", "3b", "--format", "json", str(source)], text=True, capture_output=True)
+    # print(result.stdout, result.stderr)
+    return json.loads(result.stdout)
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
