@@ -10,6 +10,7 @@ import time
 
 
 CONVERTIBLE_EXT = {".doc", ".docx"}
+HASHABLE_EXT = {".doc", ".docx", ".pdf"} #utilisé pour calculer les hashs uniquement pour les fichiers concernés par la conversion (input et ouput)
 
 options =  {
     "SelectPdfVersion": {
@@ -158,7 +159,7 @@ def main():
                             pdf_path = ouput_dir / f"{input_file.stem}.pdf"
                             converted_files[str(pdf_path)] = f" {str(rel_path_file)} was converted into PDF/A-3B. His name is now {input_file.stem}.pdf - {horodatage()}"
                         elif result.returncode != 0 :
-                            non_converted_files[str(input_file)] = f"{str(rel_path_file)}was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
+                            non_converted_files[str(input_file)] = f"{str(rel_path_file)} was not converted into PDF/A-3B due to a technical failure - {horodatage()}"
                     else :
                         non_converted_files[str(input_file)] = f"{str(rel_path_file)} was not converted into PDF/A-3B because a file with the same name already exists - {horodatage()}"
 
@@ -183,10 +184,12 @@ def main():
     sha_dict = {}
     for root, _, files, in os.walk(input_repository):
         for file in files :
-            path = os.path.join(root, file)
-            sha_sum = hash_calculator(path)
-            rel_path_file = get_relative_path(path, root)
-            sha_dict[rel_path_file] = sha_sum
+            file_path = os.path.join(root, file)
+            _, extension = os.path.splitext(file_path)
+            if extension.lower() in HASHABLE_EXT:
+                sha_sum = hash_calculator(file_path)
+                rel_path_file = get_relative_path(file_path, input_repository)
+                sha_dict[rel_path_file] = sha_sum
 
     report_path = os.path.join(input_repository, "hash_report.json")
     with open(report_path, "w", encoding="utf-8") as f:
@@ -228,7 +231,7 @@ def get_relative_path(child_path: str, absolute_parent_path: str) -> str:
     path = str(parent.name / child.relative_to(parent)) #.as_posix()
     return path #.as_posix()
     
-def hash_calculator(source):
+def hash_calculator(source) -> str:
     sha = hashlib.sha256()
     with open(source, 'rb') as file:
         while chunk := file.read(8192):
@@ -239,6 +242,7 @@ def pdfa_validation(vera_path, source):
     #veraPDF 1.30.1
     result = subprocess.run([str(vera_path), "-f", "3b", "--format", "json", str(source)], text=True, capture_output=True)
     # print(result.stdout, result.stderr)
+
     return json.loads(result.stdout)
 
 def horodatage():
