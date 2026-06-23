@@ -57,8 +57,10 @@ def main() :
 
     while True:
         try:
-            print("----\nImportant: repository destination must have the same name than the original one (C:/refleks -> D:/archives/refleks)")
-            destination = fr'{str(input("Repository where to put your copy, f.i. : C:/archives/destination/refleks):"))}'
+            print("----\n")
+            print("\nOk, now it's time to define your destination repository")
+            print("\n/!\ for this step: the destination repository must have the same name than the original one (f.i. C:/refleks -> D:/archives/refleks)")
+            destination = fr'{str(input("Repository where to move your copy, f.i. : C:/archives/destination/refleks):"))}'
             if not os.path.exists(destination):
                 raise ValueError
             elif destination == source:
@@ -94,8 +96,8 @@ def main() :
     robo_copy(source, destination, log_repository, user, role)
     
 
-    print("Process done, you may quit with crtl+c")
-
+    print("Process done, you may quit doinc crtl+c. The script will automatically close in 50 seconds")
+    time.sleep(40)
 
 def robo_copy(source: str, destination: str, log_repository: str, user: str, role: str):
     """ Copy source to destination. Include integrity check with hash and paths"""
@@ -146,7 +148,7 @@ def get_relative_paths(source : str, log_repository: str, user: str, role: str) 
                 hash_r.write(f"\nEvent id: {uuid.uuid1().hex}")
                 hash_r.write(f"\nEvent date time: {horodatage()}")        
                 hash_r.write(f"\nEvent outcome: success") 
-                hash_r.write(f"\nEvent detail: {filename} get the md5 hash {hash_output}")  
+                hash_r.write(f"\nEvent detail: {filename} get the sha256 hash {hash_output}")  
 
                 rel_path =  str(source_p.name / p.relative_to(source_p))
                 paths_array[rel_path] = (hash_output, filename)
@@ -154,6 +156,8 @@ def get_relative_paths(source : str, log_repository: str, user: str, role: str) 
     return paths_array
 
 def verify_hashs_and_paths(paths_source: dict, paths_destination: dict, log_repository: str, user: str, role: str) -> dict:
+    print("Verifying the transfert with hashs and paths...")
+    time.sleep(2)
     integrity_problems = {}
 
     report_path = os.path.join(log_repository, "transert_detail.txt")
@@ -187,12 +191,12 @@ def verify_hashs_and_paths(paths_source: dict, paths_destination: dict, log_repo
     return integrity_problems
 
 def hash_calculator(source):
-    md5 = hashlib.md5()
+    sha = hashlib.sha256()
     #print(source)
     with open(source, 'rb') as file:
         while chunk := file.read(8192):
-            md5.update(chunk)
-    return md5.hexdigest()
+            sha.update(chunk)
+    return sha.hexdigest()
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
