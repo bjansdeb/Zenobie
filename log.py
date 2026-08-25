@@ -2,7 +2,7 @@ import logging
 import time
 logger = logging.getLogger(__name__)
 console_handler = logging.StreamHandler()
-file_handler = logging.FileHandler("zenobie_log.log", mode="w", encoding="utf-8")
+file_handler = logging.FileHandler("zenobie.log", mode="w", encoding="utf-8")
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 logger.setLevel("DEBUG")

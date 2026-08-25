@@ -34,6 +34,9 @@ FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
 def create_bay(user, project_n: str, registre) -> dict:
+    """
+    Retourne les chemins créés pour le projet
+    """
     log_it("info","Creating bay...")
     parent_dir = os.path.dirname(__file__)
     filename, _ = os.path.splitext(project_n)  
@@ -120,18 +123,8 @@ def create_bay(user, project_n: str, registre) -> dict:
     else :
         os.mkdir(project_cop)
         log_it("info","Project copies repository created")
-    
-    """
-    Création d'un sous-dossier de reporting dans report avec nom du projet
-    '"""
-    reports_project = os.path.join(reports, project_n)
-    if os.path.isdir(reports_project):
-        log_it("warning","Reports sub repository already exists")
-    else :
-        os.mkdir(reports_project)
-        log_it("info","Reports sub repository created")
 
-    paths = {'originals' : project_or, 'copies': project_cop, 'unload_bay': unload_bay, 'reports': reports_project}
+    paths = {'originals' : project_or, 'copies': project_cop, 'unload_bay': unload_bay, 'reports': reports}
     
     return paths
 
@@ -143,24 +136,25 @@ def create_objects(rep, report_r, user, registre):
     for root, _, files in os.walk(rep):  #_ était dirs
         for file in files :
             f =os.path.join(root, file)
-            sha_256 = hash_calculator(f)
-            relative_path = get_relative_path(f, rep) #f seul auparavant
-            filename, file_extension = os.path.splitext(f)          
-            
-            obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", 
-                       contentLocationValue=relative_path, messageDigestAlgorithm="sha 256", 
-                       messageDigest=sha_256, originalName=filename)
-            
-            event = Event(eventType="digital signature generation", eventDateTime=horodatage(), 
-                          eventDetail=obj.messageDigest, eventOutcome="success")
-            
-            event.add_linking_agent(user)
-            obj.add_linking_event(event)
-            event.add_linking_object(obj, "source")
-            
-            registre.add_event(event)              
-            registre.add_object(obj)
-            registre.add_absolute_path(f, obj.objectIdentifierValue)
+            if os.path.isfile(f):
+                sha_256 = hash_calculator(f)
+                relative_path = get_relative_path(f, rep) #f seul auparavant
+                filename, file_extension = os.path.splitext(f)          
+                
+                obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", 
+                        contentLocationValue=relative_path, messageDigestAlgorithm="sha 256", 
+                        messageDigest=sha_256, originalName=filename)
+                
+                event = Event(eventType="digital signature generation", eventDateTime=horodatage(), 
+                            eventDetail=obj.messageDigest, eventOutcome="success")
+                
+                event.add_linking_agent(user)
+                obj.add_linking_event(event)
+                event.add_linking_object(obj, "source")
+                
+                registre.add_event(event)              
+                registre.add_object(obj)
+                registre.add_absolute_path(f, obj.objectIdentifierValue)
     #registre.get_uris()
 
     write_report("source_manifest_sha256.csv", report_r, type="hash", cible=registre)
@@ -465,8 +459,9 @@ def droid_check(rep, reports, registre):
             write_report("droid_report.csv", reports, "droid", result)
             log_it("info", "DROID has successfully finished ! " \
             f"You can see the report into {reports}")      
-            registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="success"))
+            registre.add_event(Event(eventType="identification", eventDateTime=horodatage(), eventOutcome="success"))
         except subprocess.CalledProcessError as e:
+            registre.add_event(Event(eventType="identification", eventDateTime=horodatage(), eventOutcome="failure"))
             print(e.stderr, e.stdout)
 
     else :
@@ -477,10 +472,11 @@ def droid_check(rep, reports, registre):
 def assign_droid_data(reports, copies_rep, registre):
     """Assigne les métadonnées extraites via DROID aux objets de métadonnées"""
     droid_file_path = os.path.join(reports, "droid_report.csv")
+    droid_json_path = os.path.join(reports, "droid_report.json")
 
     if os.path.isfile(droid_file_path):
         with open(droid_file_path, "r", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f)
+            writer = csv.DictWriter(f, fieldnames=0)
             for row in writer:  
                 rel_path = get_relative_path(row.get("FILE_PATH"), copies_rep)
                 writer.writerow({"FILE_PATH" : rel_path})
@@ -495,6 +491,27 @@ def assign_droid_data(reports, copies_rep, registre):
             #     print(row.get("HASH"))
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
+
+def jhove_validation(rep, reports, registre):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    jhove_path = os.path.join(base_dir, "jhove", "jhove.bat") #subprocess refuse les chemins relatifs
+    if os.path.isfile(jhove_path):
+        try:
+            log_it("info", "jhove has been launched, please note that that can take a few minutes...")
+            result = subprocess.run([jhove_path, rep, "-k"], text=True, capture_output=True, check=True)
+            write_report("jhove.csv", reports, "jhove", result)
+            log_it("info", "JHOVE has successfully finished ! " \
+            f"You can see the report into {reports}")     
+            registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="success"))
+
+        except subprocess.CalledProcessError as e:
+            registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure"))
+            print(e.stderr, e.stdout)
+    else :
+        registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure"))
+        log_it("error","jhove validation has failed because droid.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
+        "Please install it and retry")
+
 
 def remove_empty(copies_rep, report_r, registre):
     #peut-être penser à inclure un dry run
@@ -560,19 +577,18 @@ def remove_forbidden_chars(rep, report_r, registre):
 
 
 def robo_copy(source: str, destination: str, log_repository: str, report_name: str, registre: PremisObjects) -> dict:
-
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     process = subprocess.run(["robocopy", source, destination,
-                    "/e", "/copy:DATSO", f"/log+:{log_repository}/{report_name}", "/X", "/V", "/FP", "/TEE"], 
+                    "/e", "/copy:DATSO", "/X", "/V", "/FP", f"/log+:{log_repository}/{report_name}", "/TEE"], 
                     check=False) #/copyall changé en /copy:DATSO
-    if process.returncode == 1 :
-        log_it("info", "robot_copy successful finished")
+    if process.returncode < 8 :
+        log_it("info", "robocopy successful finished")
         event = Event(eventType="transfer", eventDateTime=horodatage(), 
         eventDetail= f"Robocopy process finished", eventOutcome="success")
         registre.add_event(event)        
         
     else:
-        log_it("error", f"robot_copy has encounter an error \nplease check the {log_repository}/{report_name} to fix it before retry the process")
+        log_it("error", f"robocopy has encounter an error \nplease check the {log_repository}/{report_name} to fix it before retry the process")
         while True:
             try:
                 answeer = str(input("Do you want to continue despite this problem (yes/no)? Answeer no will exit the script.")).lstrip().lower()

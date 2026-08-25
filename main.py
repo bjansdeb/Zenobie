@@ -21,6 +21,11 @@ def main():
     while True:
         repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
         try:
+            if len(project_name) >= 200 :
+                log_it("warning", "The given path has a length equel or higher than 200 chars. Please, note the maximum path length for Windows is 260 chars." \
+                "This length may crash the script\n")
+                time.sleep(3)
+
             project_name = os.path.basename(repository)
             break
         except IsADirectoryError:
@@ -92,7 +97,7 @@ def main():
             log_it("warning","Please, answeer by yes or no ")  
 
     log_it("info", "The process is almost finished. We are going to look to the formats used in this directrory with DROID. " \
-    "Please, note that some formats may be forbidden by your formats policy")
+    "Please, note that some formats may be forbidden by our formats policy")
     time.sleep(2)
     droid_check(copies_repository, reports, registre)
     assign_droid_data(reports, copies_repository, registre)
@@ -108,9 +113,6 @@ def main():
         except KeyboardInterrupt:
             print("\nscript closed")
             sys.exit()
-
-
-
 
 if __name__ == "__main__":
     main()

@@ -20,7 +20,6 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
             with open(file, "w", encoding="utf-8") as droid_r:
                 droid_r.write(f"{cible.stdout}")
         
-        
         case "hash":
             print(file)
             with open(file, 'w', newline='', encoding='utf-8') as f:
@@ -36,8 +35,11 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
                 integrity_r.write("-------------")       
                 integrity_r.write(f"\nIntegrity report")
                 for problems in dict_cible:            
-                    integrity_r.write(f"\n{problems}")            
-        
+                    integrity_r.write(f"\n{problems}")     
+
+        case "jhove":
+            with open(file, "w", encoding="utf-8") as jhove_r:
+                jhove_r.write(f"{cible.stdout}")        
         
         case "unmatched_hash":
             with open(file, 'w', newline='', encoding='utf-8') as f:

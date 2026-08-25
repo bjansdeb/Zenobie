@@ -15,7 +15,7 @@ HASHABLE_EXT = {".doc", ".docx", ".pdf"} #utilisé pour calculer les hashs uniqu
 options =  {
     "SelectPdfVersion": {
         "type": "long",
-        "value": "3" #3: PDF/A-3b
+        "value": "2" #3: PDF/A-3b
     },
     "UseTaggedPDF": {
         "type": "boolean",
@@ -133,7 +133,6 @@ def main():
 
     # write_report(converted_files, non_converted_files, repository_path, role, user, institution)
 
-
     elif selected_module == "repository":
         while True:
             try:
@@ -148,7 +147,7 @@ def main():
             for file in files :
                 file_path =os.path.join(root, file)
                 _, extension = os.path.splitext(file_path)
-                if extension in CONVERTIBLE_EXT:
+                if extension.lower() in CONVERTIBLE_EXT:
                     input_file = Path(fr"{file_path}")
                     rel_path_file = get_relative_path(input_file, input_repository)
                     ouput_dir = Path(fr"{root}") #Path(r"C:\Users\bjans\Desktop")
