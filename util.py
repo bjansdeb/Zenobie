@@ -638,8 +638,9 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
 def get_premis_object(rel_path:str, hash_v:str, registre: PremisObjects) :
     # print(registre_dict)
     for obj in registre.objects.values():
-        if rel_path in obj.contentLocation:
-            print(obj.contentLocation)
+        if rel_path in obj.contentLocationValue:
+            print(obj.contentLocationValue)
+            # + messageDigest
             # print(registre_dict[rel_path])
             # if registre[rel_path] == hash_v:
             #     print(registre[])
