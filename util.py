@@ -475,12 +475,13 @@ def assign_droid_data(reports, copies_rep, registre):
 
     if os.path.isfile(droid_file_path):
         with open(droid_file_path, "r", encoding="utf-8", newline="") as f:
-            writer = csv.reader(f, delimiter=",")
+            writer = csv.DictReader(f, delimiter=",")
             for row in writer: 
-                url_text = row[2] 
-                rel_path = get_relative_path(url_text, copies_rep)
-                droid_hash = row[12]
-                print(rel_path, droid_hash)
+                file_path = row["FILE_PATH"]
+                rel_path = get_relative_path(fr"{file_path}", copies_rep)
+                droid_hash = row["HASH"]
+                obj = get_premis_object(rel_path, droid_hash, registre)
+                print(obj)
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
 
@@ -634,6 +635,14 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
 
     return integrity_problems     
 
+def get_premis_object(rel_path:str, hash_v:str, registre: PremisObjects) :
+    # print(registre_dict)
+    for obj in registre.objects.values():
+        if rel_path in obj.contentLocation:
+            print(obj.contentLocation)
+            # print(registre_dict[rel_path])
+            # if registre[rel_path] == hash_v:
+            #     print(registre[])
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
