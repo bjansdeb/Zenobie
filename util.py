@@ -472,23 +472,15 @@ def droid_check(rep, reports, registre):
 def assign_droid_data(reports, copies_rep, registre):
     """Assigne les métadonnées extraites via DROID aux objets de métadonnées"""
     droid_file_path = os.path.join(reports, "droid_report.csv")
-    droid_json_path = os.path.join(reports, "droid_report.json")
 
     if os.path.isfile(droid_file_path):
         with open(droid_file_path, "r", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=0)
-            for row in writer:  
-                rel_path = get_relative_path(row.get("FILE_PATH"), copies_rep)
-                writer.writerow({"FILE_PATH" : rel_path})
-                print(row.get("FILE_PATH"))
-                # print(relative_path)
-
-            # for row in reader:
-            #     print(row.get("NAME"))
-            #     row.get("FILE_PATH")
-            #     row.get("PUID")
-            #     print(row.get("MIME_TYPE"))
-            #     print(row.get("HASH"))
+            writer = csv.reader(f, delimiter=",")
+            for row in writer: 
+                url_text = row[2] 
+                rel_path = get_relative_path(url_text, copies_rep)
+                droid_hash = row[12]
+                print(rel_path, droid_hash)
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
 

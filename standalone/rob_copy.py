@@ -141,6 +141,7 @@ def get_relative_paths(source : str, log_repository: str, user: str, role: str) 
             for file in files:
                 filename = os.path.join(root, file)
                 p = Path(filename)
+                
                 source_p = Path(fr'{source}')
                 hash_output = hash_calculator(filename)
                 hash_r.write(f"\n--------")  
