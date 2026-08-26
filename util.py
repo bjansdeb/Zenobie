@@ -481,7 +481,8 @@ def assign_droid_data(reports, copies_rep, registre):
                 rel_path = get_relative_path(fr"{file_path}", copies_rep)
                 droid_hash = row["HASH"]
                 obj = get_premis_object(rel_path, droid_hash, registre)
-                print(obj)
+                if obj is not None:
+                    puid = row ["PUID"]
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
 
@@ -635,15 +636,13 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
 
     return integrity_problems     
 
-def get_premis_object(rel_path:str, hash_v:str, registre: PremisObjects) :
-    # print(registre_dict)
+def get_premis_object(rel_path:str, hash_v:str, registre: PremisObjects) ->PremisObjects:
     for obj in registre.objects.values():
-        if rel_path in obj.contentLocationValue:
-            print(obj.contentLocationValue)
-            # + messageDigest
-            # print(registre_dict[rel_path])
-            # if registre[rel_path] == hash_v:
-            #     print(registre[])
+        if rel_path in obj.contentLocationValue :
+            if hash_v == obj.messageDigest:
+                return obj
+            else:
+                continue
 
 def horodatage():
     return datetime.datetime.now().strftime('%a %d %b %Y, %I:%M%p')
