@@ -482,7 +482,16 @@ def assign_droid_data(reports, copies_rep, registre):
                 droid_hash = row["HASH"]
                 obj = get_premis_object(rel_path, droid_hash, registre)
                 if obj is not None:
-                    puid = row ["PUID"]
+                    obj.formatName = row["FORMAT_NAME"]
+                    obj.size = row["SIZE"]
+                    obj.formatVersion = row["FORMAT_VERSION"]
+                    obj.formatRegistryName = row["PRONOM"]
+                    obj.formatRegistryKey = row["PUID"]
+                    event = Event(eventType="identification", eventDateTime=horodatage(), eventDetail="program=DROID", eventOutcome="success", eventOutcomeDetailNote=f"{obj.RegistryKey}")
+                    event.add_linking_object(obj)
+                    registre.add_event(event)
+                    obj.add_linking_event(event)
+
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
 
@@ -497,6 +506,7 @@ def jhove_validation(rep, reports, registre):
             log_it("info", "JHOVE has successfully finished ! " \
             f"You can see the report into {reports}")     
             registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="success"))
+            
 
         except subprocess.CalledProcessError as e:
             registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure"))
