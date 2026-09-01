@@ -40,7 +40,7 @@ def create_bay(user, project_n: str, registre) -> dict:
     log_it("info","Creating bay...")
     parent_dir = os.path.dirname(__file__)
     filename, _ = os.path.splitext(project_n)  
-    project = os.path.join(parent_dir, filename + "_project") #ajoute un dossier de projet avec le nom du fonds d'origine
+    project = os.path.join(parent_dir, filename + "_arch") #ajoute un dossier de projet avec le nom du fonds d'origine
     unload_bay = os.path.join(project, "unload_bay")
 
     """Création du dossier projet si inexistant"""
@@ -73,7 +73,7 @@ def create_bay(user, project_n: str, registre) -> dict:
     """
     Création du répertoire avec originaux si inexistant
     """
-    original_rep = "original_room"
+    original_rep = "orig_room"
     originals = os.path.join(unload_bay, original_rep)
     if os.path.isdir(originals):
         log_it("warning","Originals repository already exists")
@@ -84,7 +84,7 @@ def create_bay(user, project_n: str, registre) -> dict:
     """
     Création du répertoire de travail si inexistant
     """
-    copies_rep = "sorting_room"
+    copies_rep = "sort_room"
     copies = os.path.join(unload_bay, copies_rep)
     if os.path.isdir(copies):
         log_it("warning","Copies repository already exists")
@@ -515,6 +515,9 @@ def jhove_validation(rep, reports, registre):
         registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure"))
         log_it("error","jhove validation has failed because droid.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
         "Please install it and retry")
+
+def assign_jhove_data(reports, coies_rep, registre):
+    ...
 
 
 def remove_empty(copies_rep, report_r, registre):
