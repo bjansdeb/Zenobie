@@ -81,7 +81,7 @@ def main() :
             log_repository = fr'{str(input("Path report (repository where to put your reports, f.i. : C:/archives/report):"))}'
             if not os.path.exists(log_repository):
                 raise ValueError
-            elif log_repository == source or log_repository== destination:
+            elif log_repository == source or log_repository == destination:
                 raise NameError
             else:
                 break
@@ -104,7 +104,7 @@ def robo_copy(source: str, destination: str, log_repository: str, user: str, rol
 
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
-                    "/E", "/copy:DATS", f"/log+:{log_repository}/transfert_report.txt", "/X", "/V", "/FP", "/TEE"], #copy_all changé en DASTO puis DATS à cause NFTS
+                    "/E", f"/log+:{log_repository}/robocopy_r.txt", "/X", "/V", "/FP", "/TEE"], #copy_all changé en DASTO puis DATS à cause NFTS / "/copy:DATS" supprimé
                     check=False)
     
     paths_source = get_relative_paths(source, log_repository, user, role)    
@@ -130,7 +130,7 @@ def robo_copy(source: str, destination: str, log_repository: str, user: str, rol
 def get_relative_paths(source : str, log_repository: str, user: str, role: str) -> dict:
     paths_array = {}
 
-    report_path = os.path.join(log_repository, "hashs_report.txt")
+    report_path = os.path.join(log_repository, "hash_r.txt")
     with open(report_path,"w+t", encoding="utf-8") as hash_r:
         hash_r.write("-------------")       
         hash_r.write(f"\nHash report")
@@ -161,7 +161,7 @@ def verify_hashs_and_paths(paths_source: dict, paths_destination: dict, log_repo
     time.sleep(2)
     integrity_problems = {}
 
-    report_path = os.path.join(log_repository, "transert_detail.txt")
+    report_path = os.path.join(log_repository, "transf_r.txt")
     with open(report_path, "w+t", encoding="utf-8") as transf_r:
         transf_r.write("-----------")
         transf_r.write(f"\nTransfert report")
