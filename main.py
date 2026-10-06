@@ -21,7 +21,7 @@ def main():
     while True:
         repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
         try:
-            if len(project_name) >= 200 :
+            if len(repository) >= 200 :
                 log_it("warning", "The given path has a length equel or higher than 200 chars. Please, note the maximum path length for Windows is 260 chars." \
                 "This length may crash the script\n")
                 time.sleep(3)
