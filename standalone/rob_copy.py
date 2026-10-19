@@ -116,26 +116,22 @@ def robo_copy(source: str, destination: str, log_repository: str, user: str, rol
         with open(integrity_path, "w+t", encoding="utf-8") as integrity_r:
             integrity_r.write("-------------")       
             integrity_r.write(f"\nIntegrity report")
-            integrity_r.write(f"\nDone at {horodatage()} by {user}, {role} at AVG-Carhif using Python 3.10")  
-            for problems in integrity_problems:            
+            integrity_r.write(f"\nDone at {horodatage()} by {user}, {role} at AVG-Carhif using Python 3.10 and Robocopy")  
+            for problems in integrity_problems.values():            
                 integrity_r.write(f"\n{problems}")
-        while True:
-            try:
-                time.sleep(1)
-                print(f"{user}, there are some integrity problems. Check {integrity_path} and try to fix it before retry")
-                print("process done, crtl + c to exit")
-            except KeyboardInterrupt:
-                pass
+
+        print(f"{user}, there are some integrity problems. Check {integrity_path} and try to fix it before retry")
+        os.sys.exit()
 
 def get_relative_paths(source : str, log_repository: str, user: str, role: str) -> dict:
     paths_array = {}
 
-    report_path = os.path.join(log_repository, "hash_r.txt")
-    with open(report_path,"w+t", encoding="utf-8") as hash_r:
-        hash_r.write("-------------")       
+    report_path = os.path.join(log_repository, "hash_reports.txt")
+    with open(report_path,"a", encoding="utf-8") as hash_r:
+        hash_r.write("-------------------")       
         hash_r.write(f"\nHash report")
-        hash_r.write(f"\nDone at {horodatage()} by {user}, {role} at AVG-Carhif using Python 3.10")       
-   
+        hash_r.write(f"\nDone at {horodatage()} by {user}, {role} at AVG-Carhif using Python 3.10 and Robocopy")       
+        hash_r.write(f"\nRepository source: {source}")
         path = os.walk(source)
         for root, _, files in path :
             for file in files:
@@ -151,7 +147,7 @@ def get_relative_paths(source : str, log_repository: str, user: str, role: str) 
                 hash_r.write(f"\nEvent outcome: success") 
                 hash_r.write(f"\nEvent detail: {filename} get the sha256 hash {hash_output}")  
 
-                rel_path =  str(source_p.name / p.relative_to(source_p))
+                rel_path =  str(Path(source_p.name) / p.relative_to(source_p))
                 paths_array[rel_path] = (hash_output, filename)
     
     return paths_array
@@ -187,13 +183,22 @@ def verify_hashs_and_paths(paths_source: dict, paths_destination: dict, log_repo
                     transf_r.write(f"\nEvent outcome: failure")
                     transf_r.write(f"\nEvent detail: {paths_source[rel_path][1]} not transfered to {paths_destination[rel_path][1]}")
             else :
-                integrity_problems[paths_destination[rel_path]] = f"{rel_path} has not equivalent path in the source repository"
+                integrity_problems[paths_destination[rel_path]] = (f"{rel_path} has not equivalent path in the source repository. Detail:"
+                f"Hash mismatch for {rel_path}: "
+                f"source={paths_source[rel_path][0]}, "
+                f"destination={paths_destination[rel_path][0]}"
+                                                                )
+
+        # Deuxième boucle : fichiers absents de la destination
+        for rel_path in paths_source:
+            if rel_path not in paths_destination:
+                integrity_problems[rel_path] = (f"{rel_path} is missing from the destination repository"
+        )
 
     return integrity_problems
 
 def hash_calculator(source):
     sha = hashlib.sha256()
-    #print(source)
     with open(source, 'rb') as file:
         while chunk := file.read(8192):
             sha.update(chunk)
