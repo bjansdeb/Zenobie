@@ -1,7 +1,5 @@
 import csv
 import datetime 
-import hashlib
-import json
 import os
 import py7zr
 import re 
@@ -15,7 +13,6 @@ from config import read_config
 from errors import EmptyError
 from log import log_it
 from helpers import *
-from pathlib import Path
 from reporting import write_report
 from models import Event, PremisObjects, State, File
 
@@ -160,7 +157,7 @@ def create_objects(rep, report_r, user, registre):
 
     write_report("source_manifest_sha256.csv", report_r, type="hash", cible=registre)
 
-def sail_to_bay(rep, originals, copies, unload_bay, report_r, user, registre):
+def sail_to_bay(rep, originals, copies, report_r, user, registre):
     """
     fonction de transfert vers les répertoires de traitement et de sauvegarde
     :param rep: Répertoire source
@@ -546,13 +543,15 @@ def remove_empty(copies_rep, report_r, registre):
             log_it("error",f"Error on {root}: {e}")         
     log_it("info",f"Removing process done. Zenovie has removed {removed} empty repositories")
 
-def remove_forbidden_chars(rep, report_r, registre):
+def remove_forbidden_chars(repository_path, report_r, registre):
     log_it("info", "launch of forbidden chars removing")
     #peut-être penser à mettre un dry run
-    for root, dirs, files in os.walk(rep):
+    for root, _, files in os.walk(repository_path):
         for file in files:
             old_path = os.path.join(root, file)
-            filename, file_extension = os.path.splitext(file) 
+            filename, file_extension = os.path.splitext(file)
+            old_name = get_relative_path(old_path, repository_path) 
+ 
             if not filename:
                 filename = "unnamed"
 
@@ -569,15 +568,13 @@ def remove_forbidden_chars(rep, report_r, registre):
             normalized_name = verify_collision(new_path)      
             try:
                 os.rename(old_path, normalized_name)
-                registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {filename} - New name: {normalized_name}"))
+                new_name = get_relative_path(normalized_name, repository_path)
+                registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {old_name} - New name: {new_name}", eventOutcome="Success"))
 
-            except FileExistsError:
-                raise FileExistsError("There is a collision between two files names")
-            except PermissionError:
-                raise PermissionError("You don't have the permission to modify the file, please run Zenobie again with ")
             except OSError as e:
-                raise OSError(f"Zenobie failed to rename {old_path}: {e}")
-            
+                registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Zenobie failed to rename {old_path}: {e}", eventOutcome="Failure"))
+                continue
+
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
     log_it("info", "removing of forbidden chars done")
 
