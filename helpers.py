@@ -78,6 +78,9 @@ def is_dangerous_root(path):
     return False
 
 def verify_collision(n_path):
+    """
+    Utilisé pour vérifier que les nouveaux noms de fichiers ne rentrent pas en collision avec des noms précédents
+    """
     base, ext = os.path.splitext(n_path)
     counter = 0
     candidate = n_path
@@ -90,14 +93,6 @@ def remove_pack(old_path):
     os.remove(old_path)  
     log_it("info",f"{old_path} was removed")              
 
-def verify_collision(n_path):
-    base, ext = os.path.splitext(n_path)
-    counter = 0
-    candidate = n_path
-    while os.path.exists(candidate):
-            counter +=1
-            candidate = f"{base}_{counter}{ext}"
-    return candidate
 
 def is_safe_path(base_dir: Path, requested_path: str) -> bool:
     #https://medium.com/@contactomyna/securing-zip-file-operations-understanding-and-preventing-path-traversal-attacks-74d79f696c46

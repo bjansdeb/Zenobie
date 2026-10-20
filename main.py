@@ -40,7 +40,6 @@ def main():
     project_paths = create_bay(user, project_name, registre) #création des dossiers de la baie d'arrivage si n'existent pas  
     originals_repository = project_paths['originals']
     copies_repository = project_paths['copies']
-    unload_bay = project_paths['unload_bay']
     reports = project_paths['reports']
 
     if os.path.isdir(repository):
@@ -48,7 +47,7 @@ def main():
     
     if os.path.isdir(repository):
         sail_to_bay(repository, originals_repository, 
-                    copies_repository, unload_bay, reports, user, registre) #la fonction retourne le répertoire des copies sur lequel va se faire le state of art
+                    copies_repository, reports, user, registre) 
     if os.path.isdir(copies_repository):
         state_of_art(repository, reports, user, registre)
     else :

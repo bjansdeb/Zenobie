@@ -446,14 +446,14 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack):
     remove_pack(old_path)
 
 """Analyse des formats avec DROID"""
-def droid_check(rep, reports, registre): 
+def droid_check(repository_path, reports, registre): 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     droid_path = os.path.join(base_dir, "droid", "droid.bat") #subprocess refuse les chemins relatifs
 
     if os.path.isfile(droid_path):
         try:
             log_it("info", "DROID has been launched, please note that that can take a few minutes...")
-            result = subprocess.run([droid_path, "-a", rep,"-Pr", "profile.generateHash=true", "-R"], text=True, capture_output=True, check=True)
+            result = subprocess.run([droid_path, "-a", repository_path,"-Pr", "profile.generateHash=true", "-R"], text=True, capture_output=True, check=True)
             write_report("droid_report.csv", reports, "droid", result)
             log_it("info", "DROID has successfully finished ! " \
             f"You can see the report into {reports}")      
@@ -551,7 +551,7 @@ def remove_forbidden_chars(repository_path, report_r, registre):
             old_path = os.path.join(root, file)
             filename, file_extension = os.path.splitext(file)
             old_name = get_relative_path(old_path, repository_path) 
- 
+            sha_256 = hash_calculator(old_path)
             if not filename:
                 filename = "unnamed"
 
@@ -570,9 +570,11 @@ def remove_forbidden_chars(repository_path, report_r, registre):
                 os.rename(old_path, normalized_name)
                 new_name = get_relative_path(normalized_name, repository_path)
                 registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {old_name} - New name: {new_name}", eventOutcome="Success"))
-
+                object = get_premis_object(old_name, sha_256, registre)
+                if object is not None:
+                    ...
             except OSError as e:
-                registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Zenobie failed to rename {old_path}: {e}", eventOutcome="Failure"))
+                registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Zenobie failed to rename {old_path}: {e}", eventOutcome="failure"))
                 continue
 
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
