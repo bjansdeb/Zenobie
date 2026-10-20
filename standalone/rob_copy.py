@@ -104,10 +104,10 @@ def robo_copy(source: str, destination: str, log_repository: str, user: str, rol
 
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     subprocess.run(["robocopy", source, destination, 
-                    "/E", f"/log+:{log_repository}/robocopy_r.txt", "/X", "/V", "/FP", "/TEE"], #copy_all changé en DASTO puis DATS à cause NFTS / "/copy:DATS" supprimé
+                    "/E", f"/log+:{log_repository}/robocopy_r.txt", "/copy:DATSO","/X", "/V", "/FP", "/TEE"], #copy_all changé en DASTO puis DATS à cause NFTS / "/copy:DATS" supprimé
                     check=False)
     
-    paths_source = get_relative_paths(source, log_repository, user, role)    
+    paths_source = get_relative_paths(source, log_repository, user, role) 
     paths_destination = get_relative_paths(destination, log_repository, user, role)
     integrity_problems = verify_hashs_and_paths(paths_source, paths_destination, log_repository, user, role)
 
@@ -125,10 +125,10 @@ def robo_copy(source: str, destination: str, log_repository: str, user: str, rol
 
 def get_relative_paths(source : str, log_repository: str, user: str, role: str) -> dict:
     paths_array = {}
-
+    print("launching get relative paths")
     report_path = os.path.join(log_repository, "hash_reports.txt")
     with open(report_path,"a", encoding="utf-8") as hash_r:
-        hash_r.write("-------------------")       
+        hash_r.write("\n-------------------")       
         hash_r.write(f"\nHash report")
         hash_r.write(f"\nDone at {horodatage()} by {user}, {role} at AVG-Carhif using Python 3.10 and Robocopy")       
         hash_r.write(f"\nRepository source: {source}")
@@ -190,6 +190,7 @@ def verify_hashs_and_paths(paths_source: dict, paths_destination: dict, log_repo
                                                                 )
 
         # Deuxième boucle : fichiers absents de la destination
+        print(paths_destination)
         for rel_path in paths_source:
             if rel_path not in paths_destination:
                 integrity_problems[rel_path] = (f"{rel_path} is missing from the destination repository"
