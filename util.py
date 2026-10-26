@@ -13,7 +13,7 @@ from config import read_config
 from errors import EmptyError
 from log import log_it
 from helpers import *
-from reporting import write_report
+from reporting import write_report, write_json_report
 from models import Event, PremisObjects, State, File
 
 
@@ -159,10 +159,14 @@ def create_objects(repository_path, report_r, user, registre):
                 registre.add_event(event)              
                 registre.add_object(premis_object)
                 registre.add_absolute_path(f, premis_object.objectIdentifierValue)
-    #registre.get_uris()
 
     write_report("source_manifest_sha256.csv", report_r, type="hash", cible=registre)
-
+    log_it("info", "writing source_manifest_sha256.csv")
+    print(registre.get_objects(), type(registre.get_objects()))
+    objects_array = serialize(registre.get_objects())
+    print(objects_array)
+    write_json_report("objects.json", report_r, objects_array)
+    
 def sail_to_bay(rep, originals, copies, report_r, user, registre):
     """
     fonction de transfert vers les répertoires de traitement et de sauvegarde
@@ -170,7 +174,6 @@ def sail_to_bay(rep, originals, copies, report_r, user, registre):
     :param originals: Répertoire de sauvegarde des originaux
     :param copies: Répertoire de traitement 
     """
-
 
     """première itération avec les originaux"""
     paths_destination = robo_copy(rep, originals, report_r, "robocopy_transfer_originals_report.txt", registre)
@@ -577,6 +580,7 @@ def remove_forbidden_chars(repository_path, report_r, registre):
                 new_name = get_relative_path(normalized_name, repository_path)
                 premis_object = get_premis_object(old_name, sha_256, registre)
                 if premis_object is not None:
+                    premis_object.contentLocationValue = new_name
                     event = Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {old_name} - New name: {new_name}", eventOutcome="Success")
                     event.add_linking_object(object)
                     registre.add_event(event)

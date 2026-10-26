@@ -2,7 +2,7 @@
 
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from vocabularies import *
 from typing import List, Dict
 
@@ -393,8 +393,8 @@ class PremisObjects:
     def adapt_absolute_path(self, new_abspath, object): 
         self.absolute_paths[object] = new_abspath
 
-    def get_uris(self):
-        print(self.uris)
+    def get_objects(self):
+        return asdict(self)["objects"]
 
 @dataclass
 class Mets:

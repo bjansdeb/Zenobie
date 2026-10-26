@@ -125,8 +125,8 @@ def get_relative_paths(source : str) -> dict:
             paths_array[rel_path] = (hash_output, filename)
     return paths_array
 
-def serialize(premis_object):
-    return json.dumps(premis_object)
+def serialize(json_file):
+    return json.dumps(json_file, indent=4)
 
 def deserialize(json_file):
     return json.loads(json_file)
