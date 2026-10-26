@@ -1,7 +1,9 @@
 import csv
 import os
+
 from log import log_it
 from dataclasses import fields
+
 
 
 
@@ -11,48 +13,47 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
     Function d'écriture des rapports
     :param file_name: Nom du fichier
     :param path: Emplacement
-    :param type: hash, state, event, transfer, rename
-    :param cible: objet sur lequel porte le rapport
+    :param type: Hash, state, event, transfer, rename
+    :param cible: Objet sur lequel porte le rapport
     """
-    file = os.path.join(path, file_name)
+    file_path = os.path.join(path, file_name)
     match type:
         case "droid":
-            with open(file, "w", encoding="utf-8") as droid_r:
+            with open(file_path, "w", encoding="utf-8") as droid_r:
                 droid_r.write(f"{cible.stdout}")
         
         case "hash":
-            print(file)
-            with open(file, 'w', newline='', encoding='utf-8') as f:
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for object in cible.objects.values() :
                     writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
-            log_it("info",f"Hash report done, see {file}")
+            log_it("info",f"Hash report done, see {file_path}")
 
         case "integrity":
-            with open(file, "w+t", encoding="utf-8") as integrity_r:
+            with open(file_path, "w+t", encoding="utf-8") as integrity_r:
                 integrity_r.write("-------------")       
                 integrity_r.write(f"\nIntegrity report")
                 for problems in dict_cible:            
                     integrity_r.write(f"\n{problems}")     
 
         case "jhove":
-            with open(file, "w", encoding="utf-8") as jhove_r:
+            with open(file_path, "w", encoding="utf-8") as jhove_r:
                 jhove_r.write(f"{cible.stdout}")        
         
         case "unmatched_hash":
-            with open(file, 'w', newline='', encoding='utf-8') as f:
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = ['object_name', 'hash']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for object in cible.objects.values() :
                     writer.writerow({'object_name': {object.contentLocationValue}, 'hash': {object.messageDigest}})
-            log_it("info",f"Hash report done, see {file}")            
+            log_it("info",f"Hash report done, see {file_path}")            
 
 
         case "state":           
-            with open(file, "w+t", encoding="utf-8") as state_r:
+            with open(file_path, "w+t", encoding="utf-8") as state_r:
                 state_r.write(f"Audit of {cible.title}")
                 state_r.write(f"\nSize of the repository :{cible.full_size} bytes")
                 state_r.write(f"\nMax-depth: {cible.depth}")
@@ -77,10 +78,10 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
 
                     for f in content["files"]:
                         state_r.write(f"   |── {f}\n")
-            log_it("info",f"Audit done, see {file}")
+            log_it("info",f"Audit done, see {file_path}")
  
         case "event":
-            with open(file, "w+t", encoding="utf-8") as event_r:
+            with open(file_path, "w+t", encoding="utf-8") as event_r:
                 event_r.write(f"\nEvents report")
                 for event in cible.events.values():
                     event_r.write("\n----------------\n")
@@ -91,10 +92,10 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
                     event_r.write(f"\nEvent detail: {event.eventDetail}")
                     for items in event.linkingObjectIdentifier :
                         event_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue} ")
-            log_it("info",f"Events report done, see {file}")
+            log_it("info",f"Events report done, see {file_path}")
         
         case "transfer":
-            with open(file, "w+t", encoding="utf-8") as transf_r:
+            with open(file_path, "w+t", encoding="utf-8") as transf_r:
                 transf_r.write("-----------")
                 transf_r.write(f"\nTransfert report")
 
@@ -106,10 +107,10 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
                         transf_r.write(f"\nEvent detail: {event.eventDetail}")
                         for items in event.linkingObjectIdentifier:
                             transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
-            log_it("info",f"Transfer report done, see {file}")
+            log_it("info",f"Transfer report done, see {file_path}")
 
         case "rename":
-            with open(file, "w+t", encoding="utf-8") as rename_r:
+            with open(file_path, "w+t", encoding="utf-8") as rename_r:
                 for event in cible.events.values():
                     if event.eventType == "filename change":
                         rename_r.write(f"\nEvent id type: {event.eventIdentifierType}")
@@ -117,7 +118,7 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
                         for items in event.linkingObjectIdentifier:
                             transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
 
-            log_it("info",f"Rename report done, see {file}")
+            log_it("info",f"Rename report done, see {file_path}")
         
 
         # case "uncompliant_zip":
@@ -125,10 +126,7 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
         #         for packs in uncompliants_packages:
         #             uncompliant_r.write(f"\nEvent id type: {event.eventIdentifierType}")
 
-        case "objects":
-            with open(file, 'w', newline='', encoding='utf-8') as f:
-                attributes = [field.name for field in fields(cible)]
-                writer = csv.DictWriter(f, fieldnames=attributes)
-                writer.writeheader()
-                # for object in cible.objects.values() :
-                #     writer.writerow({'objectIdentifierType': {object.objectIdentifierType}, 'objectIdentifierValue': {object.objectIdentifierValue}})
+def json_write_report(file_name:str, path:str, content:str):
+    file_path = os.path.join(path, file_name)
+    with open(file_path, 'a', encoding='utf-8') as f:
+        f.write(content)

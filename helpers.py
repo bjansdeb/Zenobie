@@ -44,11 +44,11 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
 
     return integrity_problems     
 
-def get_premis_object(rel_path:str, hash_v:str, registre: PremisObjects) ->PremisObjects:
-    for obj in registre.objects.values():
-        if rel_path in obj.contentLocationValue :
-            if hash_v == obj.messageDigest:
-                return obj
+def get_premis_object(rel_path:str, hash_value:str, registre: PremisObjects) ->PremisObjects:
+    for object in registre.objects.values():
+        if rel_path in object.contentLocationValue :
+            if hash_value == object.messageDigest:
+                return object
             else:
                 continue
 
@@ -125,8 +125,8 @@ def get_relative_paths(source : str) -> dict:
             paths_array[rel_path] = (hash_output, filename)
     return paths_array
 
-def serialize(object):
-    return json.dumps(object)
+def serialize(premis_object):
+    return json.dumps(premis_object)
 
 def deserialize(json_file):
     return json.loads(json_file)

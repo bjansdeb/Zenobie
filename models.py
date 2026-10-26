@@ -1,8 +1,10 @@
+'''PREMIS metadata originated from https://www.loc.gov/standards/premis/v3/premis-hierarchical-3-0.html'''
+
+
 import uuid
 from dataclasses import dataclass, field
 from vocabularies import *
 from typing import List, Dict
-#PREMIS metadata originated from https://www.loc.gov/standards/premis/v3/premis-hierarchical-3-0.html
 
 @dataclass(frozen=True)
 class LinkingEventIdentifier:

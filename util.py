@@ -31,13 +31,13 @@ FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
-def create_bay(user, project_n: str, registre) -> dict:
+def create_bay(user, project_name: str, registre) -> dict:
     """
     Retourne les chemins créés pour le projet
     """
     log_it("info","Creating bay...")
     parent_dir = os.path.dirname(__file__)
-    filename, _ = os.path.splitext(project_n)  
+    filename, _ = os.path.splitext(project_name)  
     project = os.path.join(parent_dir, filename + "_arch") #ajoute un dossier de projet avec le nom du fonds d'origine
     unload_bay = os.path.join(project, "unload_bay")
 
@@ -104,7 +104,7 @@ def create_bay(user, project_n: str, registre) -> dict:
     """
     Création du sous-dossier de projet contenant les originaux si inexistant
     """
-    project_or = os.path.join(originals, project_n)
+    project_or = os.path.join(originals, project_name)
     if os.path.isdir(project_or):
         log_it("warning","Project original repository already exists")
     else :
@@ -115,7 +115,7 @@ def create_bay(user, project_n: str, registre) -> dict:
     """
     Création du sous-dossier de projet contenant les copies de travail si inexistant
     """
-    project_cop = os.path.join(copies, project_n)
+    project_cop = os.path.join(copies, project_name)
     if os.path.isdir(project_cop):
         log_it("warning","Project copies repository already exists")
     else :
@@ -126,33 +126,39 @@ def create_bay(user, project_n: str, registre) -> dict:
     
     return paths
 
-def create_objects(rep, report_r, user, registre):
+def create_objects(repository_path, report_r, user, registre):
     """
     Création des objets et calcul et détermination des hash dans le fichier racine
     """
 
-    for root, _, files in os.walk(rep):  #_ était dirs
+    for root, _, files in os.walk(repository_path):  #_ était dirs
         for file in files :
             f =os.path.join(root, file)
             if os.path.isfile(f):
                 sha_256 = hash_calculator(f)
-                relative_path = get_relative_path(f, rep) #f seul auparavant
+                relative_path = get_relative_path(f, repository_path) #f seul auparavant
                 filename, file_extension = os.path.splitext(f)          
                 
-                obj = File(objectCategory="file", formatName=file_extension, contentLocationType="file path", 
-                        contentLocationValue=relative_path, messageDigestAlgorithm="sha 256", 
-                        messageDigest=sha_256, originalName=filename)
+                premis_object = File(objectCategory="file", 
+                           formatName=file_extension, 
+                           contentLocationType="file path", 
+                           contentLocationValue=relative_path, 
+                           messageDigestAlgorithm="sha 256", 
+                           messageDigest=sha_256, 
+                           originalName=filename)
                 
-                event = Event(eventType="digital signature generation", eventDateTime=horodatage(), 
-                            eventDetail=obj.messageDigest, eventOutcome="success")
+                event = Event(eventType="digital signature generation", 
+                              eventDateTime=horodatage(), 
+                              eventDetail=premis_object.messageDigest, 
+                              eventOutcome="success")
                 
                 event.add_linking_agent(user)
-                obj.add_linking_event(event)
-                event.add_linking_object(obj, "source")
+                premis_object.add_linking_event(event)
+                event.add_linking_object(premis_object, "source")
                 
                 registre.add_event(event)              
-                registre.add_object(obj)
-                registre.add_absolute_path(f, obj.objectIdentifierValue)
+                registre.add_object(premis_object)
+                registre.add_absolute_path(f, premis_object.objectIdentifierValue)
     #registre.get_uris()
 
     write_report("source_manifest_sha256.csv", report_r, type="hash", cible=registre)
@@ -197,19 +203,19 @@ def sail_to_bay(rep, originals, copies, report_r, user, registre):
 
 
 """Etat des lieux"""
-def state_of_art(rep, reports, us, registre):
+def state_of_art(repository_path, reports, us, registre):
     log_it("info","Start of the files audit")
     start_depth = 1
     repositories_number = 0
     files_number = 0
-    full_size = os.path.getsize(str(rep)) #taille du contenu de la totalité du répertoire en bytes
+    full_size = os.path.getsize(str(repository_path)) #taille du contenu de la totalité du répertoire en bytes
     date = horodatage() #horodatage du rapport
-    state_report = State(rep, us.agentName, us.note, date=horodatage())
+    state_report = State(repository_path, us.agentName, us.note, date=horodatage())
     tree = {}
     all_paths = [] #pour calculer le plus anciens/récents
     all_extensions = []
-    for root, dirs, files in os.walk(rep):
-        current_depth = root.replace(rep, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
+    for root, dirs, files in os.walk(repository_path):
+        current_depth = root.replace(repository_path, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
         if os.path.isdir(root):
             repositories_number += 1
@@ -493,13 +499,13 @@ def assign_droid_data(reports, copies_rep, registre):
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
 
-def jhove_validation(rep, reports, registre):
+def jhove_validation(repository_path, reports, registre):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     jhove_path = os.path.join(base_dir, "jhove", "jhove.bat") #subprocess refuse les chemins relatifs
     if os.path.isfile(jhove_path):
         try:
             log_it("info", "jhove has been launched, please note that that can take a few minutes...")
-            result = subprocess.run([jhove_path, rep, "-k"], text=True, capture_output=True, check=True)
+            result = subprocess.run([jhove_path, repository_path, "-k"], text=True, capture_output=True, check=True)
             write_report("jhove.csv", reports, "jhove", result)
             log_it("info", "JHOVE has successfully finished ! " \
             f"You can see the report into {reports}")     
@@ -569,10 +575,13 @@ def remove_forbidden_chars(repository_path, report_r, registre):
             try:
                 os.rename(old_path, normalized_name)
                 new_name = get_relative_path(normalized_name, repository_path)
-                registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {old_name} - New name: {new_name}", eventOutcome="Success"))
-                object = get_premis_object(old_name, sha_256, registre)
-                if object is not None:
-                    ...
+                premis_object = get_premis_object(old_name, sha_256, registre)
+                if premis_object is not None:
+                    event = Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {old_name} - New name: {new_name}", eventOutcome="Success")
+                    event.add_linking_object(object)
+                    registre.add_event(event)
+                    premis_object.add_linking_event(event)
+
             except OSError as e:
                 registre.add_event(Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Zenobie failed to rename {old_path}: {e}", eventOutcome="failure"))
                 continue
