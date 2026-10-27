@@ -125,8 +125,8 @@ def get_relative_paths(source : str) -> dict:
             paths_array[rel_path] = (hash_output, filename)
     return paths_array
 
-def serialize(json_file):
+def serialize(json_file :dict) -> str:
     return json.dumps(json_file, indent=4)
 
-def deserialize(json_file):
+def deserialize(json_file :str) -> dict:
     return json.loads(json_file)

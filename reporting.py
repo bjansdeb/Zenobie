@@ -2,8 +2,7 @@ import csv
 import os
 
 from log import log_it
-from dataclasses import fields
-
+from helpers import serialize, deserialize
 
 
 
@@ -126,7 +125,14 @@ def write_report(file_name: str, path: str, type: str, cible: object = None, dic
         #         for packs in uncompliants_packages:
         #             uncompliant_r.write(f"\nEvent id type: {event.eventIdentifierType}")
 
+def read_json_report(file_name:str, path: str) -> str:
+    file_path = os.path.join(path, file_name)
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()   
+    content = deserialize(content) 
+    return content
+
 def write_json_report(file_name: str, path: str, content:str):
     file_path = os.path.join(path, file_name)
-    with open(file_path, 'a', encoding='utf-8') as f:
+    with open(file_path, 'w', encoding='utf-8') as f:
         f.write(content)

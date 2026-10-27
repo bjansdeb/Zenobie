@@ -31,7 +31,7 @@ FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
-def create_bay(user, project_name: str, registre) -> dict:
+def create_bay(project_name: str) -> dict:
     """
     Retourne les chemins créés pour le projet
     """
@@ -111,7 +111,6 @@ def create_bay(user, project_name: str, registre) -> dict:
         os.mkdir(project_or)
         log_it("info","Project original repository created")
 
-
     """
     Création du sous-dossier de projet contenant les copies de travail si inexistant
     """
@@ -162,10 +161,9 @@ def create_objects(repository_path, report_r, user, registre):
 
     write_report("source_manifest_sha256.csv", report_r, type="hash", cible=registre)
     log_it("info", "writing source_manifest_sha256.csv")
-    print(registre.get_objects(), type(registre.get_objects()))
-    objects_array = serialize(registre.get_objects())
-    print(objects_array)
-    write_json_report("objects.json", report_r, objects_array)
+
+    # objects_array = serialize(registre.get_objects())
+
     
 def sail_to_bay(rep, originals, copies, report_r, user, registre):
     """
@@ -203,6 +201,8 @@ def sail_to_bay(rep, originals, copies, report_r, user, registre):
         log_it("info", "hash and path verification done without problems for sorting repository")
 
     write_report("moving_report.txt", report_r, "transfer", cible=registre )
+    log_it("info", "writing moving_report.txt")
+
 
 
 """Etat des lieux"""
@@ -265,6 +265,7 @@ def state_of_art(repository_path, reports, us, registre):
     state_report.extensions = all_extensions
     registre.add_event(Event(eventType="appraisal", eventDateTime=horodatage(), eventDetail= state_report, eventOutcome="success"))
     write_report("initial_audit_report.txt", reports, "state", cible= state_report)
+    log_it("info", "Writing initial_audit_report.txt")
     log_it("info", "Audit succesfully finished")
 
 """Décompression des fichiers"""
@@ -476,7 +477,7 @@ def droid_check(repository_path, reports, registre):
         "Please install it and retry")
 
 
-def assign_droid_data(reports, copies_rep, registre):
+def assign_droid_data(copies_rep, reports, registre):
     """Assigne les métadonnées extraites via DROID aux objets de métadonnées"""
     droid_file_path = os.path.join(reports, "droid_report.csv")
 
@@ -487,17 +488,22 @@ def assign_droid_data(reports, copies_rep, registre):
                 file_path = row["FILE_PATH"]
                 rel_path = get_relative_path(fr"{file_path}", copies_rep)
                 droid_hash = row["HASH"]
-                obj = get_premis_object(rel_path, droid_hash, registre)
-                if obj is not None:
-                    obj.formatName = row["FORMAT_NAME"]
-                    obj.size = row["SIZE"]
-                    obj.formatVersion = row["FORMAT_VERSION"]
-                    obj.formatRegistryName = row["PRONOM"]
-                    obj.formatRegistryKey = row["PUID"]
-                    event = Event(eventType="identification", eventDateTime=horodatage(), eventDetail="program=DROID", eventOutcome="success", eventOutcomeDetailNote=f"{obj.RegistryKey}")
-                    event.add_linking_object(obj)
+                premis_object = get_premis_object(rel_path, droid_hash, registre)
+                if premis_object is not None:
+                    premis_object.formatName = row["FORMAT_NAME"]
+                    premis_object.size = row["SIZE"]
+                    premis_object.formatVersion = row["FORMAT_VERSION"]
+                    premis_object.formatRegistryName = row["PRONOM"]
+                    premis_object.formatRegistryKey = row["PUID"]
+                    event = Event(eventType="identification", 
+                                  eventDateTime=horodatage(), 
+                                  eventDetail="program=DROID", 
+                                  eventOutcome="success", 
+                                  eventOutcomeDetailNote=f"{premis_object.RegistryKey}")
+                   
+                    event.add_linking_object(premis_object)
                     registre.add_event(event)
-                    obj.add_linking_event(event)
+                    premis_object.add_linking_event(event)
 
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
@@ -523,8 +529,12 @@ def jhove_validation(repository_path, reports, registre):
         log_it("error","jhove validation has failed because droid.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
         "Please install it and retry")
 
-def assign_jhove_data(reports, coies_rep, registre):
-    ...
+def assign_jhove_data(reports, copies_rep, registre):
+    jhove_file_path = os.path.join(reports, "jhove.csv")
+    if os.path.isfile(jhove_file_path):
+        ...
+    else:
+        log_it("error", "Zenobie does not find the jhove.csv file") 
 
 
 def remove_empty(copies_rep, report_r, registre):
@@ -623,3 +633,10 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
 
     paths_destination = get_relative_paths(destination) #utile pour la vérification avec les hashs
     return paths_destination
+
+def finalizing_metadata(report_r:str, registre:PremisObjects):
+    write_report("events_report.txt", report_r, type="event", cible=registre)
+    write_report("objects.csv", report_r, type="objects", cible=registre )
+
+    write_json_report("objects.json", report_r, registre.get_objects())
+    log_it("info", "writing final objects.json")

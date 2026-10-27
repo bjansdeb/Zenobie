@@ -37,7 +37,7 @@ def main():
         except FileNotFoundError:
             raise("The indicated path is not correct, retry")
 
-    project_paths = create_bay(user, project_name, registre) #création des dossiers de la baie d'arrivage si n'existent pas  
+    project_paths = create_bay(project_name) #création des dossiers de la baie d'arrivage si n'existent pas  
     originals_repository = project_paths['originals']
     copies_repository = project_paths['copies']
     reports = project_paths['reports']
@@ -99,10 +99,9 @@ def main():
     "Please, note that some formats may be forbidden by our formats policy")
     time.sleep(2)
     droid_check(copies_repository, reports, registre)
-    assign_droid_data(reports, copies_repository, registre)
-
-    write_report("events_report.txt", reports, type="event", cible=registre)
-    write_report("objects.csv", reports, type="objects", cible=registre )
+    assign_droid_data(copies_repository, reports, registre)
+    jhove_validation(copies_repository, reports, registre)
+    finalizing_metadata(reports, registre)
 
     while True:
         try:
