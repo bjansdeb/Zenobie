@@ -46,7 +46,7 @@ def verify_hashs_and_paths(paths_destination: dict, registre: PremisObjects) ->d
 
 def get_premis_object(rel_path:str, hash_value:str, registre: PremisObjects) ->PremisObjects:
     for object in registre.objects.values():
-        if rel_path in object.contentLocationValue :
+        if rel_path == object.contentLocationValue :
             if hash_value == object.messageDigest:
                 return object
             else:
@@ -108,8 +108,8 @@ def get_relative_path(child_path: str, absolute_parent_path: str) -> str:
     """Calcule le chemin relatif pour un chemin individuel donné à partir du répertoire parent absolu"""
     child = Path(child_path)
     parent = Path(fr'{absolute_parent_path}')
-    path = str(parent.name / child.relative_to(parent)) #.as_posix()
-    return path #.as_posix()
+    path = str(parent.name / child.relative_to(parent)) 
+    return path 
 
 def get_relative_paths(source : str) -> dict:
     """Calcule le chemin relatif pour un répertoire entier et les place dans un array avec leur hash comme key"""

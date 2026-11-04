@@ -463,7 +463,7 @@ def droid_check(repository_path, reports, registre):
     if os.path.isfile(droid_path):
         try:
             log_it("info", "DROID has been launched, please note that that can take a few minutes...")
-            result = subprocess.run([droid_path, "-a", repository_path,"-Pr", "profile.generateHash=true", "-R"], text=True, capture_output=True, check=True)
+            result = subprocess.run([droid_path, "-a", repository_path,"-Pr", "profile.generateHash=true", "hashAlgorithm=sha256", "-R"], text=True, capture_output=True, check=True)
             write_report("droid_report.csv", reports, "droid", result)
             log_it("info", "DROID has successfully finished ! " \
             f"You can see the report into {reports}")      
@@ -486,22 +486,22 @@ def assign_droid_data(copies_rep, reports, registre):
             writer = csv.DictReader(f, delimiter=",")
             for row in writer: 
                 file_path = row["FILE_PATH"]
-                rel_path = get_relative_path(fr"{file_path}", copies_rep)
+                rel_path = get_relative_path(file_path, copies_rep)
                 droid_hash = row["HASH"]
                 premis_object = get_premis_object(rel_path, droid_hash, registre)
                 if premis_object is not None:
                     premis_object.formatName = row["FORMAT_NAME"]
                     premis_object.size = row["SIZE"]
                     premis_object.formatVersion = row["FORMAT_VERSION"]
-                    premis_object.formatRegistryName = row["PRONOM"]
+                    premis_object.formatRegistryName = "PRONOM"
                     premis_object.formatRegistryKey = row["PUID"]
                     event = Event(eventType="identification", 
                                   eventDateTime=horodatage(), 
                                   eventDetail="program=DROID", 
                                   eventOutcome="success", 
-                                  eventOutcomeDetailNote=f"{premis_object.RegistryKey}")
+                                  eventOutcomeDetailNote=f"{premis_object.formatRegistryKey}")
                    
-                    event.add_linking_object(premis_object)
+                    # event.add_linking_object(premis_object)
                     registre.add_event(event)
                     premis_object.add_linking_event(event)
 
@@ -514,8 +514,8 @@ def jhove_validation(repository_path, reports, registre):
     if os.path.isfile(jhove_path):
         try:
             log_it("info", "jhove has been launched, please note that that can take a few minutes...")
-            result = subprocess.run([jhove_path, repository_path, "-k"], text=True, capture_output=True, check=True)
-            write_report("jhove.csv", reports, "jhove", result)
+            result = subprocess.run([jhove_path, repository_path, "-k", "-h json"], text=True, capture_output=True, check=True)
+            write_report("jhove.json", reports, "jhove", result)
             log_it("info", "JHOVE has successfully finished ! " \
             f"You can see the report into {reports}")     
             registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="success"))
@@ -637,6 +637,6 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
 def finalizing_metadata(report_r:str, registre:PremisObjects):
     write_report("events_report.txt", report_r, type="event", cible=registre)
     write_report("objects.csv", report_r, type="objects", cible=registre )
-
-    write_json_report("objects.json", report_r, registre.get_objects())
+    premis_objects = serialize(registre.get_objects())
+    write_json_report("objects.json", report_r, premis_objects)
     log_it("info", "writing final objects.json")
