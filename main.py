@@ -22,7 +22,7 @@ def main():
         repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
         try:
             if len(repository) >= 200 :
-                log_it("warning", "The given path has a length equel or higher than 200 chars. Please, note the maximum path length for Windows is 260 chars." \
+                log_it("warning", "The given path has a length equal or higher than 200 chars. Please, note the maximum path length for Windows is 260 chars." \
                 "This length may crash the script\n")
                 time.sleep(3)
 
@@ -36,6 +36,32 @@ def main():
             raise ("Repertory not valid, retry") 
         except FileNotFoundError:
             raise("The indicated path is not correct, retry")
+
+    while True:
+        try:
+            higher_name = size_name_check(repository)
+
+            if higher_name >= 240:
+                log_it("warning", f"The higher pathname inside the given repository has a length of {higher_name} chars. Please, note the maximum pathname length for Windows is 260 chars." \
+                        "This length may crash the script\n")
+                
+                answeer = str(input("Do you want to continue anyway(yes/no)? If no, you will leave the program")).lstrip().lower()
+                if answeer == "yes":
+                    log_it("info","Ok, we continue despite too high pathname")
+                    time.sleep(3)
+                    break
+                elif answeer == "no":
+                    log_it("info","Ok, you are leaving Zenobie. Bye!")
+                    time.sleep(2)
+                    sys.exit()
+                else :
+                    raise EmptyError   
+            else:
+                break
+        except EmptyError:
+            log_it("warning","Please, answeer by yes or no")
+
+
 
     project_paths = create_bay(project_name) #création des dossiers de la baie d'arrivage si n'existent pas  
     originals_repository = project_paths['originals']
@@ -58,7 +84,7 @@ def main():
         try:
             answeer = str(input("May I dezip repositories(yes/no)?")).lstrip().lower()
             if answeer == "yes":
-                dezip(copies_repository, registre)
+                dezip(copies_repository, reports, registre)
                 break
             elif answeer == "no":
                 log_it("info", "ok, we continue without dezipping repositories")

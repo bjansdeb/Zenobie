@@ -6,16 +6,16 @@ from helpers import serialize, deserialize
 
 
 
-def write_report(file_name: str, path: str, type: str, cible: object = None, dict_cible: dict = None):
+def write_report(file_name: str, report_path: str, type: str, cible: object = None, dict_cible: dict = None):
     """
-    Docstring for write_report
     Function d'écriture des rapports
     :param file_name: Nom du fichier
-    :param path: Emplacement
-    :param type: Hash, state, event, transfer, rename
+    :param report_path: Répertoire où va être placé le rapport
+    :param type: hash, state, event, transfer, rename, integrity, jhove, unmatched_hash
     :param cible: Objet sur lequel porte le rapport
+    :parem dict_cible : Dict sur lequel porte le rapport
     """
-    file_path = os.path.join(path, file_name)
+    file_path = os.path.join(report_path, file_name)
     match type:
         case "droid":
             with open(file_path, "w", encoding="utf-8") as droid_r:
@@ -132,7 +132,8 @@ def read_json_report(file_name:str, path: str) -> str:
     content = deserialize(content) 
     return content
 
-def write_json_report(file_name: str, path: str, content:str):
+def write_json_report(file_name: str, path: str, content:dict):
     file_path = os.path.join(path, file_name)
+    content = serialize(content)
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(content)

@@ -31,6 +31,19 @@ FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
 
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
 
+def size_name_check(repository_path : str) -> int:
+    """
+    Retourne la taille du nom de chemin le plus long dans l'arborescence
+    """
+    higher_size = 0
+    for root, _, files in os.walk(repository_path):  #_ était dirs
+        for file in files :
+            file_path_name =os.path.join(root, file)
+            size_path = len(file_path_name)
+            if size_path > higher_size:
+                higher_size = size_path
+    return higher_size
+
 def create_bay(project_name: str) -> dict:
     """
     Retourne les chemins créés pour le projet
@@ -269,11 +282,12 @@ def state_of_art(repository_path, reports, us, registre):
     log_it("info", "Audit succesfully finished")
 
 """Décompression des fichiers"""
-def dezip(copies_rep, registre):
+def dezip(copies_rep, report_path, registre):
     """
-    Docstring for dezp
     Fonction de décompression
-    :param copies_rep: path : attention, ne prend que des répertoires, pas des fichiers
+    :param copies_rep: path attention, ne prend que des répertoires, pas des fichiers
+    :param report_path : répertoire acceuillant les rapports
+    :param registre: objet de métadonnées PREMIS
     """
 
     exceeding_packs = []
@@ -307,14 +321,16 @@ def dezip(copies_rep, registre):
     #Exemple archivematica <premis:eventDetail>Unpacked from: %transferDirectory%objects/Project.zip (63706dd1-6f8f-4460-a5a5-546bac061d91)</premis:eventDetail>
    
     if uncompliant_packs :
-        packs_report = "uncompliant_packs.txt"
-        with open(pat, "w+t", encoding="utf-8") as uncompliant_r:
+        filename = "uncompliant_packs.txt"
+        file_path = os.path.join(report_path, filename)
+
+        with open(file_path, "w+t", encoding="utf-8") as uncompliant_r:
             uncompliant_r.write("Uncompliant packs :")
             for pack in uncompliant_packs:
                 uncompliant_r.write(f"\n{pack}")
 
         log_it("info",f"There are packages not compliant with your format policy.")
-        log_it("info",f"You can check the list here : {packs_report}")
+        log_it("info",f"You can check the list here : {file_path}")
         log_it("info",f"Please, note that some of these packs may contain dangerous links")
         answeer= input("May I remove them (yes/no)? :")
         while True :
@@ -328,15 +344,16 @@ def dezip(copies_rep, registre):
         pass
 
     if exceeding_packs:
-        pat = "exceeding_packs.txt"
-        with open(pat, "w+t", encoding="utf-8") as uncompliant_r:
+        filename = "exceeding_packs.txt"
+        file_path = os.path.join(report_path, filename)       
+        with open(file_path, "w+t", encoding="utf-8") as uncompliant_r:
             uncompliant_r.write("Exceeding packs :")
             for pack in exceeding_packs:
                 uncompliant_r.write(f"\n{pack}")
 
 
         log_it("info", f"There are also packages compliant with your format policy but that exceeds the authorized maximum size of 1 go or maximum number of files")
-        log_it("info",f"You can check the list here : {pat}")
+        log_it("info",f"You can check the list here : {file_path}")
         anwseer = input("May I remove them (yes/no)? :")
         while True:
             if anwseer == "yes":
@@ -530,7 +547,7 @@ def jhove_validation(repository_path, reports, registre):
         "Please install it and retry")
 
 def assign_jhove_data(reports, copies_rep, registre):
-    jhove_file_path = os.path.join(reports, "jhove.csv")
+    jhove_file_path = os.path.join(reports, "jhove.json")
     if os.path.isfile(jhove_file_path):
         ...
     else:
@@ -592,7 +609,7 @@ def remove_forbidden_chars(repository_path, report_r, registre):
                 if premis_object is not None:
                     premis_object.contentLocationValue = new_name
                     event = Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {old_name} - New name: {new_name}", eventOutcome="Success")
-                    event.add_linking_object(object)
+                    # event.add_linking_object(object)
                     registre.add_event(event)
                     premis_object.add_linking_event(event)
 
