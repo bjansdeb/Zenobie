@@ -1,5 +1,6 @@
 import csv
 import os
+import json
 
 from log import log_it
 from helpers import serialize, deserialize
@@ -134,6 +135,6 @@ def read_json_report(file_name:str, path: str) -> str:
 
 def write_json_report(file_name: str, path: str, content:dict):
     file_path = os.path.join(path, file_name)
-    content = serialize(content)
+    # content = serialize(content)
     with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(content)
+        json.dump(content, f,  indent=4, ensure_ascii=False, sort_keys=True)

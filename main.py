@@ -80,20 +80,11 @@ def main():
         log_it("warning","Path not correct, retry please")
         pass
 
-    while True:
-        try:
-            answeer = str(input("May I dezip repositories(yes/no)?")).lstrip().lower()
-            if answeer == "yes":
-                dezip(copies_repository, reports, registre)
-                break
-            elif answeer == "no":
-                log_it("info", "ok, we continue without dezipping repositories")
-                time.sleep(2)
-                break
-            else :
-                raise EmptyError            
-        except EmptyError:
-            log_it("warning","Please, answeer by yes or no")
+
+    log_it("Info", "Dezipping compressed directories...")
+    time.sleep(2)
+    dezip(copies_repository, reports, registre)
+
 
     while True:
         try:

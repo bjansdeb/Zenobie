@@ -325,11 +325,11 @@ def dezip(copies_rep, report_path, registre):
         file_path = os.path.join(report_path, filename)
 
         with open(file_path, "w+t", encoding="utf-8") as uncompliant_r:
-            uncompliant_r.write("Uncompliant packs :")
+            uncompliant_r.write("The following list contains uncompliant or problematic packs or files that were removed:")
             for pack in uncompliant_packs:
                 uncompliant_r.write(f"\n{pack}")
 
-        log_it("info",f"There are packages not compliant with your format policy.")
+        log_it("info",f"There are files or packages not compliant with your format policy.")
         log_it("info",f"You can check the list here : {file_path}")
         log_it("info",f"Please, note that some of these packs may contain dangerous links")
         answeer= input("May I remove them (yes/no)? :")
@@ -530,7 +530,7 @@ def jhove_validation(repository_path, reports, registre):
     jhove_path = os.path.join(base_dir, "jhove", "jhove.bat") #subprocess refuse les chemins relatifs
     if os.path.isfile(jhove_path):
         try:
-            log_it("info", "jhove has been launched, please note that that can take a few minutes...")
+            log_it("info", "JHOVE has been launched, please note that that can take a few minutes...")
             result = subprocess.run([jhove_path, repository_path, "-k", "-h json"], text=True, capture_output=True, check=True)
             write_report("jhove.json", reports, "jhove", result)
             log_it("info", "JHOVE has successfully finished ! " \
@@ -543,7 +543,7 @@ def jhove_validation(repository_path, reports, registre):
             print(e.stderr, e.stdout)
     else :
         registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure"))
-        log_it("error","jhove validation has failed because droid.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
+        log_it("error","JHOVE validation has failed because droid.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
         "Please install it and retry")
 
 def assign_jhove_data(reports, copies_rep, registre):
@@ -551,7 +551,7 @@ def assign_jhove_data(reports, copies_rep, registre):
     if os.path.isfile(jhove_file_path):
         ...
     else:
-        log_it("error", "Zenobie does not find the jhove.csv file") 
+        log_it("error", "Zenobie does not find the jhove.json file") 
 
 
 def remove_empty(copies_rep, report_r, registre):
@@ -571,6 +571,7 @@ def remove_empty(copies_rep, report_r, registre):
             if root == initial_root:
                 continue
             if not os.listdir(root):
+                os.chmod(root, stat.S_IWRITE)
                 os.rmdir(root) 
                 log_it("info",f"Removed: {root}")
                 registre.add_event(Event(eventType="deletion", eventDateTime=horodatage(), eventDetail=f"{root} was empty and has been removed"))
@@ -654,6 +655,6 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
 def finalizing_metadata(report_r:str, registre:PremisObjects):
     write_report("events_report.txt", report_r, type="event", cible=registre)
     write_report("objects.csv", report_r, type="objects", cible=registre )
-    premis_objects = serialize(registre.get_objects())
-    write_json_report("objects.json", report_r, premis_objects)
+    # premis_objects = serialize(registre.get_objects())
+    write_json_report("objects.json", report_r, registre.get_objects())
     log_it("info", "writing final objects.json")
