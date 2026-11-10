@@ -83,14 +83,14 @@ def main():
 
     log_it("Info", "Dezipping compressed directories...")
     time.sleep(2)
-    dezip(copies_repository, reports, registre)
+    dezip(copies_repository, reports, user, registre)
 
 
     while True:
         try:
             answeer = str(input("May I scan and remove empty repositories(yes/no)?")).lstrip().lower()
             if answeer == "yes":
-                remove_empty(copies_repository, reports, registre)
+                remove_empty(copies_repository, reports, user, registre)
                 break
             elif answeer == "no":
                 log_it("info","Ok, we continue without removing the empty repositories")
@@ -103,7 +103,7 @@ def main():
         try: 
             answeer = str(input("Ok, now let's take a look to the forbidden chars. May I scan and removing them (yes/no)?")).lstrip().lower()
             if answeer == "yes":
-                remove_forbidden_chars(copies_repository, reports, registre)
+                remove_forbidden_chars(copies_repository, reports, user, registre)
                 break
             elif answeer == "no":
                 log_it("info","Ok, we continue without removing the forbidden chars")
@@ -115,10 +115,10 @@ def main():
     log_it("info", "The process is almost finished. We are going to look to the formats used in this directrory with DROID. " \
     "Please, note that some formats may be forbidden by our formats policy")
     time.sleep(2)
-    droid_check(copies_repository, reports, registre)
-    assign_droid_data(copies_repository, reports, registre)
-    jhove_validation(copies_repository, reports, registre)
-    assign_jhove_data(copies_repository, reports, registre)
+    droid_check(copies_repository, reports, user, registre)
+    assign_droid_data(copies_repository, reports, user, registre)
+    jhove_validation(copies_repository, reports, user, registre)
+    assign_jhove_data(copies_repository, reports, user, registre)
     finalizing_metadata(reports, registre)
 
     while True:

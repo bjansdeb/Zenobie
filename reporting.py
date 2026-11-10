@@ -86,6 +86,10 @@ def write_report(file_name: str, report_path: str, type: str, cible: object = No
                     event_r.write(f"\nEvent id: {event.eventIdentifierValue}")
                     event_r.write(f"\nEvent date time: {event.eventDateTime}")
                     event_r.write(f"\nEvent detail: {event.eventDetail}")
+                    event_r.write(f"\nEvent outcome: {event.eventOutcome}")
+                    event_r.write(f"\nEvent outcome detail note : {event.eventOutcomeDetailNote}")
+                    # for items in event.linkingAgentIdentifier:
+                    #     event_r.write(f"Cible agent identifier: [{items.agentIdentifierType}] {items.agentIdentifierValue}")
                     for items in event.linkingObjectIdentifier :
                         event_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue} ")
             log_it("info",f"Events report done, see {file_path}")
