@@ -13,7 +13,7 @@ from config import read_config
 from errors import EmptyError
 from log import log_it
 from helpers import *
-from reporting import write_report, write_json_report
+from reporting import write_report, read_json_report, write_json_report
 from models import Event, PremisObjects, State, File
 
 
@@ -480,14 +480,16 @@ def droid_check(repository_path, reports, registre):
     if os.path.isfile(droid_path):
         try:
             log_it("info", "DROID has been launched, please note that that can take a few minutes...")
-            result = subprocess.run([droid_path, "-a", repository_path,"-Pr", "profile.generateHash=true", "hashAlgorithm=sha256", "-R"], text=True, capture_output=True, check=True)
+            result = subprocess.run([droid_path, "-a", repository_path,"-Pr", "profile.generateHash=true", "hashAlgorithm=sha256", "-R"], 
+                                    text=True, capture_output=True, check=True)
             write_report("droid_report.csv", reports, "droid", result)
             log_it("info", "DROID has successfully finished ! " \
             f"You can see the report into {reports}")      
             registre.add_event(Event(eventType="identification", eventDateTime=horodatage(), eventOutcome="success"))
         except subprocess.CalledProcessError as e:
             registre.add_event(Event(eventType="identification", eventDateTime=horodatage(), eventOutcome="failure"))
-            print(e.stderr, e.stdout)
+            log_it("error", f"DROID failed. Details : {e.stderr}, {e.stdout}")
+            pass
 
     else :
         log_it("error","droid check has failed because droid.bat is not present on the Zenobie repository (droid/droid.bat). " \
@@ -531,8 +533,11 @@ def jhove_validation(repository_path, reports, registre):
     if os.path.isfile(jhove_path):
         try:
             log_it("info", "JHOVE has been launched, please note that that can take a few minutes...")
-            result = subprocess.run([jhove_path, repository_path, "-k", "-h json"], text=True, capture_output=True, check=True)
-            write_report("jhove.json", reports, "jhove", result)
+            jhove_results = subprocess.run([jhove_path, repository_path, "-k", "-h", "json"], 
+                                           text=True, capture_output=True, check=True, encoding="utf-8")
+            metadata = deserialize(jhove_results.stdout)
+            write_json_report("jhove.json", reports, metadata)
+
             log_it("info", "JHOVE has successfully finished ! " \
             f"You can see the report into {reports}")     
             registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="success"))
@@ -540,16 +545,22 @@ def jhove_validation(repository_path, reports, registre):
 
         except subprocess.CalledProcessError as e:
             registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure"))
-            print(e.stderr, e.stdout)
+            log_it("error", f"JHOVE has failed {e.stderr}, {e.stdout}")
     else :
         registre.add_event(Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure"))
-        log_it("error","JHOVE validation has failed because droid.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
+        log_it("error","JHOVE validation has failed because jhove.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
         "Please install it and retry")
 
-def assign_jhove_data(reports, copies_rep, registre):
+def assign_jhove_data(copies_rep, reports, registre):
     jhove_file_path = os.path.join(reports, "jhove.json")
     if os.path.isfile(jhove_file_path):
-        ...
+        jhove_dict_results = read_json_report("jhove.json", reports)
+        for item in jhove_dict_results["jhove"]["repInfo"]:
+            file_path = item["uri"]
+            rel_path = get_relative_path(file_path, copies_rep)
+            jhove_hash = item['properties'][3]['checksum'] #3 correspond au sha-256
+            premis_object = get_premis_object(rel_path, jhove_hash, registre)
+            premis_object            
     else:
         log_it("error", "Zenobie does not find the jhove.json file") 
 
@@ -655,6 +666,5 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
 def finalizing_metadata(report_r:str, registre:PremisObjects):
     write_report("events_report.txt", report_r, type="event", cible=registre)
     write_report("objects.csv", report_r, type="objects", cible=registre )
-    # premis_objects = serialize(registre.get_objects())
     write_json_report("objects.json", report_r, registre.get_objects())
     log_it("info", "writing final objects.json")

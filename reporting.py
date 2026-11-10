@@ -12,7 +12,7 @@ def write_report(file_name: str, report_path: str, type: str, cible: object = No
     Function d'écriture des rapports
     :param file_name: Nom du fichier
     :param report_path: Répertoire où va être placé le rapport
-    :param type: hash, state, event, transfer, rename, integrity, jhove, unmatched_hash
+    :param type: hash, state, event, transfer, rename, integrity, unmatched_hash
     :param cible: Objet sur lequel porte le rapport
     :parem dict_cible : Dict sur lequel porte le rapport
     """
@@ -36,11 +36,7 @@ def write_report(file_name: str, report_path: str, type: str, cible: object = No
                 integrity_r.write("-------------")       
                 integrity_r.write(f"\nIntegrity report")
                 for problems in dict_cible:            
-                    integrity_r.write(f"\n{problems}")     
-
-        case "jhove":
-            with open(file_path, "w", encoding="utf-8") as jhove_r:
-                jhove_r.write(f"{cible.stdout}")        
+                    integrity_r.write(f"\n{problems}")          
         
         case "unmatched_hash":
             with open(file_path, 'w', newline='', encoding='utf-8') as f:
@@ -126,7 +122,7 @@ def write_report(file_name: str, report_path: str, type: str, cible: object = No
         #         for packs in uncompliants_packages:
         #             uncompliant_r.write(f"\nEvent id type: {event.eventIdentifierType}")
 
-def read_json_report(file_name:str, path: str) -> str:
+def read_json_report(file_name:str, path: str) -> dict:
     file_path = os.path.join(path, file_name)
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()   
@@ -137,4 +133,4 @@ def write_json_report(file_name: str, path: str, content:dict):
     file_path = os.path.join(path, file_name)
     # content = serialize(content)
     with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(content, f,  indent=4, ensure_ascii=False, sort_keys=True)
+        json.dump(content, f,  indent=4, ensure_ascii=False, sort_keys=True, default=str)

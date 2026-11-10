@@ -118,6 +118,7 @@ def main():
     droid_check(copies_repository, reports, registre)
     assign_droid_data(copies_repository, reports, registre)
     jhove_validation(copies_repository, reports, registre)
+    assign_jhove_data(copies_repository, reports, registre)
     finalizing_metadata(reports, registre)
 
     while True:
