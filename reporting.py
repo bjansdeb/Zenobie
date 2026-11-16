@@ -3,7 +3,7 @@ import os
 import json
 
 from log import log_it
-from helpers import serialize, deserialize
+from helpers import deserialize
 
 
 
@@ -88,8 +88,8 @@ def write_report(file_name: str, report_path: str, type: str, cible: object = No
                     event_r.write(f"\nEvent detail: {event.eventDetail}")
                     event_r.write(f"\nEvent outcome: {event.eventOutcome}")
                     event_r.write(f"\nEvent outcome detail note : {event.eventOutcomeDetailNote}")
-                    # for items in event.linkingAgentIdentifier:
-                    #     event_r.write(f"Cible agent identifier: [{items.agentIdentifierType}] {items.agentIdentifierValue}")
+                    for items in event.linkingAgentIdentifier:
+                        event_r.write(f"\nCible agent identifier: [{items.linkingAgentIdentifierType}] {items.linkingAgentIdentifierValue}")
                     for items in event.linkingObjectIdentifier :
                         event_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue} ")
             log_it("info",f"Events report done, see {file_path}")
@@ -121,11 +121,6 @@ def write_report(file_name: str, report_path: str, type: str, cible: object = No
             log_it("info",f"Rename report done, see {file_path}")
         
 
-        # case "uncompliant_zip":
-        #     with open(file, "w+t", encoding="utf-8") as uncompliant_r:
-        #         for packs in uncompliants_packages:
-        #             uncompliant_r.write(f"\nEvent id type: {event.eventIdentifierType}")
-
 def read_json_report(file_name:str, path: str) -> dict:
     file_path = os.path.join(path, file_name)
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -135,6 +130,5 @@ def read_json_report(file_name:str, path: str) -> dict:
 
 def write_json_report(file_name: str, path: str, content:dict):
     file_path = os.path.join(path, file_name)
-    # content = serialize(content)
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(content, f,  indent=4, ensure_ascii=False, sort_keys=True, default=str)

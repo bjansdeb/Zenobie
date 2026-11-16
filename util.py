@@ -23,6 +23,7 @@ MAX_TOTAL_SIZE = int(config_data['max_total_size'])
 AUTHORIZED_PACKS = config_data['authorized_packs']
 UNAUTHORIZED_PACKS = config_data['unauthorized_packs']
 FORBIDDEN_CHARS = re.compile(r"[\@\]\[\^\<\>\:\"\'\{\}\/\|\?\*\x00-\x1F]")
+MIMES_NIV_1 = config_data['mimes_niv_1']
 
 
 """-----------------------------------------------"""
@@ -64,14 +65,20 @@ def create_bay(project_name: str) -> dict:
                 if answeer == "yes":
                     break
                 elif answeer == "no":
-                    sys.exit()
+                    raise KeyboardInterrupt
+
                 else : 
                     raise EmptyError    
             except EmptyError:
                 log_it("info", "please, answeer by yes or no") 
 
+            except KeyboardInterrupt:
+                log_it("info", "script closed")
+                sys.exit()
+
     else : 
         os.mkdir(project)
+
 
     """
     Création de la baie si inexistant
@@ -157,7 +164,8 @@ def create_objects(source_path, report_repository, user, registre):
                            contentLocationType="file path", 
                            contentLocationValue=relative_path, 
                            messageDigestAlgorithm="sha 256", 
-                           messageDigest=sha_256, 
+                           messageDigest=sha_256,
+                           messageDigestOriginator= "Python 3.10 hashlib.sha256",  
                            originalName=filename)
                 
                 event = Event(eventType="digital signature generation", 
@@ -503,11 +511,19 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
         try:        
             z.extractall(new_path)
             log_it("info",f"{old_path} extracted")
-            registre.add_event(Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", eventDateTime=horodatage(), eventOutcome="success"))
+
+            event = Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", 
+                                     eventDateTime=horodatage(), eventOutcome="success")
+            event.add_linking_agent(user)
+            registre.add_event(event)
             remove_pack(old_path)
 
         except IOError as e:
-            registre.add_event(Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", eventDateTime=horodatage(), eventOutcome="failure"))
+            event = Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", 
+                                     eventDateTime=horodatage(), eventOutcome="failure")
+
+            event.add_linking_agent(user)
+            registre.add_event(event)
             log_it("error", f"Unpacking failure. Detail : {e}" )
             pass
 
@@ -558,13 +574,17 @@ def assign_droid_data(copies_rep, reports, user, registre):
                     premis_object.formatVersion = row["FORMAT_VERSION"]
                     premis_object.formatRegistryName = "PRONOM"
                     premis_object.formatRegistryKey = row["PUID"]
+                    if row['MIME_TYPE'] in MIMES_NIV_1 :
+                        premis_object.compositionLevel = 1
+                    else:
+                        premis_object.compositionLevel = 0
                     event = Event(eventType="identification", 
                                   eventDateTime=horodatage(), 
                                   eventDetail="program=DROID", 
                                   eventOutcome="success", 
                                   eventOutcomeDetailNote=f"{premis_object.formatRegistryKey}")
                    
-                    # event.add_linking_object(premis_object)
+                    event.add_linking_object(premis_object, "source")
                     event.add_linking_agent(user)
                     registre.add_event(event)
                     premis_object.add_linking_event(event)
@@ -618,9 +638,11 @@ def assign_jhove_data(copies_rep, reports, user, registre):
                     eventDetail=f"program=JHOVE ; version={jhove_version}", 
                     eventOutcome="success", 
                     eventOutcomeDetailNote=f"format={item['format']}; version= {item['reportingModule']['release']}; result={item['status']}")
-                    # event.add_linking_object(premis_object)
+                event.add_linking_object(premis_object, "outcome")
                 event.add_linking_agent(user)
-                registre.add_event(event)            
+                registre.add_event(event)      
+                premis_object.add_linking_event(event)
+      
     else:
         log_it("error", "Zenobie does not find the jhove.json file") 
 
@@ -638,20 +660,35 @@ def remove_empty(copies_rep, report_r, user, registre):
     removed = 0 
     initial_root = abs_path
     for root, _, files in os.walk(abs_path, topdown=False):
+        sha_256 = hash_calculator(root)
+        premis_object = get_premis_object(root, sha_256, registre)
         try:
             if root == initial_root:
                 continue
             if not os.listdir(root):
                 os.chmod(root, stat.S_IWRITE)
                 os.rmdir(root) 
-                log_it("info",f"Removed: {root}")
+
                 event = Event(eventType="deletion", eventDateTime=horodatage(), 
+                              eventOutcome="success", 
                               eventDetail=f"{root} was empty and has been removed")
                 event.add_linking_agent(user)
+                event.add_linking_object(premis_object, "result")
+
                 registre.add_event(event)
+                
+                log_it("info",f"Removed: {root}")
+
                 removed += 1
-        except Exception as e:
+        except OSError as e:
             log_it("error",f"Error on {root}: {e}")         
+            event = Event(eventType="deletion", eventDateTime=horodatage(), 
+                          eventOutcome="failure", 
+                          eventDetail=f"{root} was not removed : {e}")
+            event.add_linking_agent(user)
+            event.add_linking_object(premis_object, "result")
+
+            registre.add_event(event)            
     log_it("info",f"Removing process done. Zenovie has removed {removed} empty repositories")
 
 def remove_forbidden_chars(repository_path, report_r, user, registre):
@@ -676,24 +713,39 @@ def remove_forbidden_chars(repository_path, report_r, user, registre):
             if new_path == old_path:
                 continue
 
-            normalized_name = verify_collision(new_path)      
-            try:
-                os.rename(old_path, normalized_name)
-                new_name = get_relative_path(normalized_name, repository_path)
-                premis_object = get_premis_object(old_name, sha_256, registre)
-                if premis_object is not None:
+            normalized_name = verify_collision(new_path)
+            new_name = get_relative_path(normalized_name, repository_path)
+            premis_object = get_premis_object(old_name, sha_256, registre)
+            if premis_object is not None:
+                try:
+                    os.rename(old_path, normalized_name)
                     premis_object.contentLocationValue = new_name
-                    event = Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Original name: {old_name} - New name: {new_name}", eventOutcome="Success")
+                    event = Event(eventType="filename change", eventDateTime=horodatage(), 
+                                eventDetail=f"Original name: {old_name} - New name: {new_name}", 
+                                eventOutcome="Success")
                     event.add_linking_agent(user)
+                    event.add_linking_object(premis_object, "result")
                     registre.add_event(event)
                     premis_object.add_linking_event(event)
 
-            except OSError as e:
-                event = Event(eventType="filename change", eventDateTime=horodatage(), eventDetail=f"Zenobie failed to rename {old_path}: {e}", eventOutcome="failure")
+                except OSError as e:
+                    event = Event(eventType="filename change", eventDateTime=horodatage(), 
+                                eventDetail=f"Zenobie failed to rename {old_path}: {e}", 
+                                eventOutcome="failure")
+                    event.add_linking_agent(user)
+                    event.add_linking_object(premis_object, "result")
+                    registre.add_event(event)
+                    premis_object.add_linking_event(event)
+
+                    continue
+            else:
+                log_it("error", f"PREMIS object with name{ old_name} and hash {sha_256} not found")
+                event = Event(eventType="filename change", eventDateTime=horodatage(), 
+                            eventDetail=f"Zenobie failed to rename {old_path} because PREMIS object was not found", 
+                            eventOutcome="failure")
                 event.add_linking_agent(user)
                 registre.add_event(event)
-                continue
-
+                
     write_report("rename_report.txt", report_r, type="rename", cible=registre)
     log_it("info", "removing of forbidden chars done")
 

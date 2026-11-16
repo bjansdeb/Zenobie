@@ -96,12 +96,12 @@ class Event:
             )
         )
     
-    def add_linking_object(self, object, role):
+    def add_linking_object(self, object, role : str | None):
         self.linkingObjectIdentifier.append(
             LinkingObjectIdentifier(
                 linkingObjectIdentifierType= object.objectIdentifierType,
                 linkingObjectIdentifierValue= object.objectIdentifierValue,
-                linkingObjectRole = role
+                linkingObjectRole = role #rôle de l'objet en relation avec l'event [source | outcome]
             )
         )
 
@@ -198,7 +198,7 @@ class Object:
     linkingRightsStatementIdentifierType : str | None = None # (M, NR)
     linkingRightsStatementIdentifierValue : str | None = None #(M, NR)        
 
-    def add_linking_event(self, event):
+    def add_linking_event(self, event : Event):
         self.linkingEventIdentifiers.append(
             LinkingEventIdentifier(
                 linkingEventIdentifierType=event.eventIdentifierType,
@@ -236,9 +236,10 @@ class Bitstream(Object):
     dateCreatedByApplication : str | None = None #(O, NR) [File, Bitstream]
     creatingApplicationExtension : str | None = None #(O, R) [File, Bitstream]
     """1.5.6    inhibitors (O, R) [File, Bitstream]"""
+    """Indique la présence d'un chiffrement de l'objet"""
     inhibitorType  : str | None = None  #(M, NR) [File, Bitstream]
     inhibitorTarget  : str | None = None #(O, R) [File, Bitstream]
-    inhibitorKey : str | None = None  #(O, NR) [File, Bitstream]
+    inhibitorKey : str | None = None  #(O, NR) [File, Bitstream] 
     """1.5.7    objectCharacteristicsExtension"""
     objectCharacteristicsExtension : str | None = None     #(O, R) [File, Bitstream]
 
