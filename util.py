@@ -677,7 +677,14 @@ def assign_jhove_data(copies_rep, reports, user, registre):
         for item in jhove_dict_results["jhove"]["repInfo"]:
             file_path = item["uri"]
             rel_path = get_relative_path(file_path, copies_rep)
-            jhove_hash = item['properties'][3]['checksum'] #3 correspond au sha-256
+            jhove_hash = next(
+                (
+                    prop.get('checksum')
+                    for prop in item.get('properties', [])
+                    if prop.get('name') == 'checksum'
+                ),
+                None
+            )
             premis_object = get_premis_object(rel_path, jhove_hash, registre)
             if premis_object is not None :
                 event = Event(eventType="validation", 
