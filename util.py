@@ -14,7 +14,7 @@ from errors import EmptyError
 from log import log_it
 from helpers import *
 from reporting import write_report, read_json_report, write_json_report
-from models import Event, PremisObjects, State, File
+from models import Event, PremisObjects, State, File, Representation
 
 
 config_data = read_config()
@@ -167,19 +167,55 @@ def create_objects(source_path, report_repository, user, registre):
                            messageDigest=sha_256,
                            messageDigestOriginator= "Python 3.10 hashlib.sha256",  
                            originalName=filename)
-                
-                event = Event(eventType="digital signature generation", 
+
+                creation_event = Event(eventType="creation", 
+                              eventDateTime=horodatage(), 
+                              eventDetail=f"Premis digital object created for {premis_object.originalName}", 
+                              eventOutcome="success")
+
+                creation_event.add_linking_agent(user)
+                premis_object.add_linking_event(creation_event)
+                creation_event.add_linking_object(premis_object, "source")
+
+                signature_event = Event(eventType="digital signature generation", 
                               eventDateTime=horodatage(), 
                               eventDetail=premis_object.messageDigest, 
                               eventOutcome="success")
                 
-                event.add_linking_agent(user)
-                premis_object.add_linking_event(event)
-                event.add_linking_object(premis_object, "source")
+                signature_event.add_linking_agent(user)
+                premis_object.add_linking_event(signature_event)
+                signature_event.add_linking_object(premis_object, "source")
                 
-                registre.add_event(event)              
+                registre.add_event(creation_event)              
+                registre.add_event(signature_event)              
                 registre.add_object(premis_object)
                 registre.add_absolute_path(f, premis_object.objectIdentifierValue)
+
+            elif os.path.isdir(f):
+                relative_path = get_relative_path(f, source_path) #f seul auparavant
+                filename, file_extension = os.path.splitext(f)          
+                relative_path = get_relative_path(f, source_path) #f seul auparavant
+
+                premis_object = Representation(objectCategory="representation",
+                                               contentLocationType="file path", 
+                                               contentLocationValue=relative_path,  
+                                               originalName=filename
+                                               )
+                
+                creation_event = Event(eventType="creation", 
+                              eventDateTime=horodatage(), 
+                              eventDetail=f"Premis digital object created for {premis_object.filename}", 
+                              eventOutcome="success")
+                
+                creation_event.add_linking_agent(user)
+                premis_object.add_linking_event(creation_event)
+                creation_event.add_linking_object(premis_object, "source")
+
+                registre.add_event(creation_event)
+                registre.add_object(premis_object)
+                registre.add_absolute_path(f, premis_object.objectIdentifierValue)
+
+
 
     write_report("source_manifest_sha256.csv", report_repository, type="hash", cible=registre)
     log_it("info", "writing source_manifest_sha256.csv")
@@ -412,19 +448,22 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
             zip.extractall(new_path)
             log_it("info", f"{old_path} extracted")
             event = Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", 
-                          eventDateTime=horodatage(), eventOutcome="success")
+                            eventDateTime=horodatage(), eventOutcome="success")
             event.add_linking_agent(user)
             registre.add_event(event)
-            remove_pack(old_path)
 
-        except IOError as e:
+        except OSError as e:
             event = Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", 
-                          eventDateTime=horodatage(), eventOutcome="failure")
+                            eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
             registre.add_event(event)
             log_it("error", f"Unpacking failure. Detail : {e}" )
             pass
-
+    try:
+        remove_pack(old_path)
+        log_it("info", f"{old_path} successfully removed")
+    except OSError as e:
+        log_it("warning",f"Archive extracted successfully but could not be removed: {e}")
 
 def extract_tarfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
     with tarfile.open(old_path, "r:*") as tar:
@@ -462,19 +501,23 @@ def extract_tarfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
             tar.extractall(new_path, filter="data")
             log_it("info",f"{old_path} extracted") 
             event = Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", 
-                          eventDateTime=horodatage(), eventOutcome="success")
+                            eventDateTime=horodatage(), eventOutcome="success")
             event.add_linking_agent(user)
             registre.add_event(event)
-            remove_pack(old_path)
 
-        except IOError as e:
+        except OSError as e:
             event = Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", 
-                          eventDateTime=horodatage(), eventOutcome="failure")
+                            eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
             registre.add_event(event)            
             log_it("error", f"Unpacking failure. Detail : {e}" )
             pass       
 
+    try:
+        remove_pack(old_path)
+        log_it("info", f"{old_path} successfully removed")
+    except OSError as e:
+        log_it("warning",f"Archive extracted successfully but could not be removed: {e}")
 
 def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
     with py7zr.SevenZipFile(old_path, 'r') as z:
@@ -513,19 +556,23 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
             log_it("info",f"{old_path} extracted")
 
             event = Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", 
-                                     eventDateTime=horodatage(), eventOutcome="success")
+                                        eventDateTime=horodatage(), eventOutcome="success")
             event.add_linking_agent(user)
             registre.add_event(event)
-            remove_pack(old_path)
-
-        except IOError as e:
+        
+        except OSError as e:
             event = Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", 
-                                     eventDateTime=horodatage(), eventOutcome="failure")
-
+                                        eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
             registre.add_event(event)
             log_it("error", f"Unpacking failure. Detail : {e}" )
             pass
+
+    try:
+        remove_pack(old_path)
+        log_it("info", f"{old_path} successfully removed")
+    except OSError as e:
+        log_it("warning",f"Archive extracted successfully but could not be removed: {e}")
 
 """Analyse des formats avec DROID"""
 def droid_check(source_path, reports, user, registre): 
@@ -574,10 +621,10 @@ def assign_droid_data(copies_rep, reports, user, registre):
                     premis_object.formatVersion = row["FORMAT_VERSION"]
                     premis_object.formatRegistryName = "PRONOM"
                     premis_object.formatRegistryKey = row["PUID"]
-                    if row['MIME_TYPE'] in MIMES_NIV_1 :
-                        premis_object.compositionLevel = 1
+                    if row['MIME_TYPE'] is not None and row['MIME_TYPE'] in MIMES_NIV_1 :
+                        premis_object.compositionLevel = "1"
                     else:
-                        premis_object.compositionLevel = 0
+                        premis_object.compositionLevel = "0"
                     event = Event(eventType="identification", 
                                   eventDateTime=horodatage(), 
                                   eventDetail="program=DROID", 
@@ -660,8 +707,6 @@ def remove_empty(copies_rep, report_r, user, registre):
     removed = 0 
     initial_root = abs_path
     for root, _, files in os.walk(abs_path, topdown=False):
-        sha_256 = hash_calculator(root)
-        premis_object = get_premis_object(root, sha_256, registre)
         try:
             if root == initial_root:
                 continue
@@ -673,20 +718,19 @@ def remove_empty(copies_rep, report_r, user, registre):
                               eventOutcome="success", 
                               eventDetail=f"{root} was empty and has been removed")
                 event.add_linking_agent(user)
-                event.add_linking_object(premis_object, "result")
 
                 registre.add_event(event)
                 
                 log_it("info",f"Removed: {root}")
 
                 removed += 1
+
         except OSError as e:
             log_it("error",f"Error on {root}: {e}")         
             event = Event(eventType="deletion", eventDateTime=horodatage(), 
                           eventOutcome="failure", 
                           eventDetail=f"{root} was not removed : {e}")
             event.add_linking_agent(user)
-            event.add_linking_object(premis_object, "result")
 
             registre.add_event(event)            
     log_it("info",f"Removing process done. Zenovie has removed {removed} empty repositories")

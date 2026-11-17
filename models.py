@@ -101,7 +101,7 @@ class Event:
             LinkingObjectIdentifier(
                 linkingObjectIdentifierType= object.objectIdentifierType,
                 linkingObjectIdentifierValue= object.objectIdentifierValue,
-                linkingObjectRole = role #rôle de l'objet en relation avec l'event [source | outcome]
+                linkingObjectRole = role #rôle de l'objet en relation avec l'event str [source | outcome]
             )
         )
 
@@ -338,7 +338,7 @@ class IntellectualEntity(Object):
 
 @dataclass    
 class Representation(Object):
-    """1.3 preservationLevel [representation/file]"""
+    """1.3 preservationLevel [representation/file]""" #(O)
     preservationLevelType : str | None = None 
     preservationLevelValue : str | None = None #(M, NR)
     preservationLevelRole : str | None = None #(O, NR)

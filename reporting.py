@@ -116,7 +116,7 @@ def write_report(file_name: str, report_path: str, type: str, cible: object = No
                         rename_r.write(f"\nEvent id type: {event.eventIdentifierType}")
                         rename_r.write(f"\nEvent detail: {event.eventDetail}")
                         for items in event.linkingObjectIdentifier:
-                            transf_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
+                            rename_r.write(f"\nCible object identifier: [{items.linkingObjectIdentifierType}] {items.linkingObjectIdentifierValue}")
 
             log_it("info",f"Rename report done, see {file_path}")
         

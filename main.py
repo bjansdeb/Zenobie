@@ -127,7 +127,7 @@ def main():
             if sys.exit():
                 raise KeyboardInterrupt
         except KeyboardInterrupt:
-            print("\nscript closed")
+            print("script closed")
             sys.exit()
 
 if __name__ == "__main__":
