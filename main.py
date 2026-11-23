@@ -7,6 +7,9 @@ from models import Agent, Event, Object, Mets, PremisObjects, State
 from reporting import write_report
 from util import *
 
+MEDIAN_PATH_SIZE = 200
+MAX_PATH_SIZE = 240
+
 def main():
     
     log_it("info", "Welcome, my name is Zenobie and I'm going to help you to deal your digital bulk")
@@ -19,29 +22,35 @@ def main():
 
 
     while True:
-        repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :"))
+        repository = str(input("Super ! Ok let's work, what's the path to your digital bulk repository :").strip())
         try:
-            if len(repository) >= 200 :
-                log_it("warning", "The given path has a length equal or higher than 200 chars. Please, note the maximum path length for Windows is 260 chars." \
+            if len(repository) >= MEDIAN_PATH_SIZE :
+                log_it("warning", "The indicated path has a length equal or higher than 200 chars. Please, note the maximum path length for Windows is 260 chars." \
                 "This length may crash the script\n")
                 time.sleep(3)
+            if not os.path.exists(repository):
+                log_it("warning", "The indicated path does not exist.")
+                continue
+            if not os.path.isdir(repository):
+                log_it("warning", "The indicated path is not a directory.")
+                continue
 
-            project_name = os.path.basename(repository)
+            project_name = os.path.basename(os.path.normpath(repository))
             break
         except IsADirectoryError:
-            raise("Repertory nod valid, retry with a correct path name")        
+            raise IsADirectoryError("Repertory nod valid, retry with a correct path name")        
         except NotADirectoryError: 
-            raise("Please select a directory and retry")
+            raise NotADirectoryError("Please select a directory and retry")
         except ValueError:
-            raise ("Repertory not valid, retry") 
+            raise ValueError("Repertory not valid, retry") 
         except FileNotFoundError:
-            raise("The indicated path is not correct, retry")
+            raise FileNotFoundError("The indicated path is not correct, retry")
 
     while True:
         try:
             higher_name = size_name_check(repository)
 
-            if higher_name >= 240:
+            if higher_name >= MAX_PATH_SIZE:
                 log_it("warning", f"The higher pathname inside the given repository has a length of {higher_name} chars. Please, note the maximum pathname length for Windows is 260 chars." \
                         "This length may crash the script\n")
                 
@@ -121,14 +130,7 @@ def main():
     assign_jhove_data(copies_repository, reports, user, registre)
     finalizing_metadata(reports, registre)
 
-    while True:
-        try:
-            input(f"Process successfully finished {user.agentName}, do ctrl+c to quit the program")
-            if sys.exit():
-                raise KeyboardInterrupt
-        except KeyboardInterrupt:
-            print("script closed")
-            sys.exit()
+    log_it("warning", f"Process successfully finished {user.agentName}, bye !")
 
 if __name__ == "__main__":
     main()
