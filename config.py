@@ -2,6 +2,9 @@ import configparser
 def read_config():
     config = configparser.ConfigParser()
     config.read('settings/config.ini')
+    
+    median_path = config.get('General', 'median_path')
+    max_path = config.get('General', 'max_path')
     max_files = config.get('Dezipper', 'max_files')
     max_total_size = config.get('Dezipper', 'max_total_size')
     mimes_niv_1 = config.get('Dezipper', 'mimes_niv_1')
@@ -10,6 +13,8 @@ def read_config():
     forbidden_chars = config.get('Renamer', 'forbidden_chars')
 
     config_values = {
+        'median_path': median_path,
+        'max_path': max_path,
         'max_files' : max_files,
         'max_total_size' : max_total_size,
         'authorized_packs': authorized_packs,

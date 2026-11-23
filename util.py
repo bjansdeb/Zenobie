@@ -29,21 +29,7 @@ MIMES_NIV_1 = config_data['mimes_niv_1']
 """-----------------------------------------------"""
 """            **** Functions principales  ****   """
 """-----------------------------------------------"""
-
 """Création et transfert vers la baie d'embarquement avec calcul hash"""
-
-def size_name_check(repository_path : str) -> int:
-    """
-    Retourne la taille du nom de chemin le plus long dans l'arborescence
-    """
-    higher_size = 0
-    for root, _, files in os.walk(repository_path):  #_ était dirs
-        for file in files :
-            file_path_name =os.path.join(root, file)
-            size_path = len(file_path_name)
-            if size_path > higher_size:
-                higher_size = size_path
-    return higher_size
 
 def create_bay(project_name: str) -> dict:
     """
@@ -146,7 +132,7 @@ def create_bay(project_name: str) -> dict:
     
     return paths
 
-def create_objects(source_path, report_repository, user, registre):
+def create_objects(source_path, report_repository, user, registry):
     """
     Création des objets et calcul et détermination des hash dans le fichier racine
     """
@@ -186,10 +172,10 @@ def create_objects(source_path, report_repository, user, registre):
                 premis_object.add_linking_event(signature_event)
                 signature_event.add_linking_object(premis_object, "source")
                 
-                registre.add_event(creation_event)              
-                registre.add_event(signature_event)              
-                registre.add_object(premis_object)
-                registre.add_absolute_path(f, premis_object.objectIdentifierValue)
+                registry.add_event(creation_event)              
+                registry.add_event(signature_event)              
+                registry.add_object(premis_object)
+                registry.add_absolute_path(f, premis_object.objectIdentifierValue)
 
             elif os.path.isdir(f):
                 relative_path = get_relative_path(f, source_path) #f seul auparavant
@@ -211,17 +197,17 @@ def create_objects(source_path, report_repository, user, registre):
                 premis_object.add_linking_event(creation_event)
                 creation_event.add_linking_object(premis_object, "source")
 
-                registre.add_event(creation_event)
-                registre.add_object(premis_object)
-                registre.add_absolute_path(f, premis_object.objectIdentifierValue)
+                registry.add_event(creation_event)
+                registry.add_object(premis_object)
+                registry.add_absolute_path(f, premis_object.objectIdentifierValue)
 
 
 
-    write_report("source_manifest_sha256.csv", report_repository, type="hash", cible=registre)
+    write_report("source_manifest_sha256.csv", report_repository, type="hash", cible=registry)
     log_it("info", "writing source_manifest_sha256.csv")
 
     
-def sail_to_bay(source_path, originals, copies, report_repository, user, registre):
+def sail_to_bay(source_path, originals, copies, report_repository, user, registry):
     """
     fonction de transfert vers les répertoires de traitement et de sauvegarde
     :param rep: Répertoire source
@@ -230,8 +216,8 @@ def sail_to_bay(source_path, originals, copies, report_repository, user, registr
     """
 
     """première itération avec les originaux"""
-    paths_destination = robo_copy(source_path, originals, report_repository, "robocopy_transfer_originals_report.txt", user, registre)
-    integrity_problems = verify_hashs_and_paths(paths_destination, registre)
+    paths_destination = robo_copy(source_path, originals, report_repository, "robocopy_transfer_originals_report.txt", user, registry)
+    integrity_problems = verify_hashs_and_paths(paths_destination, registry)
     paths_destination.clear()
 
     if integrity_problems :
@@ -244,10 +230,10 @@ def sail_to_bay(source_path, originals, copies, report_repository, user, registr
 
 
     """deuxième itération avec les copies"""
-    paths_destination = robo_copy(source_path, copies, report_repository, "robocopy_transfer_copies_report.txt", user, registre)
+    paths_destination = robo_copy(source_path, copies, report_repository, "robocopy_transfer_copies_report.txt", user, registry)
     
 
-    integrity_problems = verify_hashs_and_paths(paths_destination, registre)
+    integrity_problems = verify_hashs_and_paths(paths_destination, registry)
     paths_destination.clear()
 
     if integrity_problems :
@@ -258,13 +244,13 @@ def sail_to_bay(source_path, originals, copies, report_repository, user, registr
     else:
         log_it("info", "hash and path verification done without problems for sorting repository")
 
-    write_report("moving_report.txt", report_repository, "transfer", cible=registre )
+    write_report("moving_report.txt", report_repository, "transfer", cible=registry )
     log_it("info", "writing moving_report.txt")
 
 
 
 """Etat des lieux"""
-def state_of_art(source_path, report_repository, user, registre):
+def state_of_art(source_path, report_repository, user, registry):
     log_it("info","Start of the files audit")
     start_depth = 1
     repositories_number = 0
@@ -324,19 +310,19 @@ def state_of_art(source_path, report_repository, user, registre):
 
     event = Event(eventType="appraisal", eventDateTime=horodatage(), eventDetail= state_report, eventOutcome="success")
     event.add_linking_agent(user)
-    registre.add_event(event)
+    registry.add_event(event)
 
     write_report("initial_audit_report.txt", report_repository, "state", cible= state_report)
     log_it("info", "Writing initial_audit_report.txt")
     log_it("info", "Audit succesfully finished")
 
 """Décompression des fichiers"""
-def dezip(copies_rep, report_path, user, registre):
+def dezip(copies_rep, report_path, user, registry):
     """
     Fonction de décompression
     :param copies_rep: path attention, ne prend que des répertoires, pas des fichiers
     :param report_path : répertoire acceuillant les rapports
-    :param registre: objet de métadonnées PREMIS
+    :param registry: objet de métadonnées PREMIS
     """
 
     exceeding_packs = []
@@ -358,16 +344,16 @@ def dezip(copies_rep, report_path, user, registre):
     for old_path, filename, file_extension in archives_to_unpack:
         match file_extension:
             case ".zip":
-                extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registre)
+                extract_zipfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registry)
 
             case ".tar":
-                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registre)
+                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registry)
 
             case ".gz":
-                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registre)
+                extract_tarfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registry)
 
             case ".7z":
-                extract_7zfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registre)
+                extract_7zfile(old_path, filename, uncompliant_packs, exceeding_packs, user, registry)
   
     if uncompliant_packs :
         filename = "uncompliant_packs.txt"
@@ -413,7 +399,7 @@ def dezip(copies_rep, report_path, user, registre):
                 break
 
 
-def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre): 
+def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack, user, registry): 
     with zipfile.ZipFile(old_path, "r") as zip:
         compressed_size = 0
         files_number = 0
@@ -450,13 +436,13 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
             event = Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", 
                             eventDateTime=horodatage(), eventOutcome="success")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
 
         except OSError as e:
             event = Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", 
                             eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
             log_it("error", f"Unpacking failure. Detail : {e}" )
             pass
     try:
@@ -465,7 +451,7 @@ def extract_zipfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
     except OSError as e:
         log_it("warning",f"Archive extracted successfully but could not be removed: {e}")
 
-def extract_tarfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
+def extract_tarfile(old_path, file_n, uncomp_pack, exceed_pack, user, registry):
     with tarfile.open(old_path, "r:*") as tar:
         compressed_size = 0
         files_number= 0
@@ -503,13 +489,13 @@ def extract_tarfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
             event = Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", 
                             eventDateTime=horodatage(), eventOutcome="success")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
 
         except OSError as e:
             event = Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", 
                             eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
-            registre.add_event(event)            
+            registry.add_event(event)            
             log_it("error", f"Unpacking failure. Detail : {e}" )
             pass       
 
@@ -519,7 +505,7 @@ def extract_tarfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
     except OSError as e:
         log_it("warning",f"Archive extracted successfully but could not be removed: {e}")
 
-def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
+def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack, user, registry):
     with py7zr.SevenZipFile(old_path, 'r') as z:
         compressed_size = 0
         files_number = 0
@@ -558,13 +544,13 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
             event = Event(eventType="unpacking", eventDetail=f"Unpacked from : {old_path}", 
                                         eventDateTime=horodatage(), eventOutcome="success")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
         
         except OSError as e:
             event = Event(eventType="unpacking", eventDetail=f"Not unpacked from : {old_path}", 
                                         eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
             log_it("error", f"Unpacking failure. Detail : {e}" )
             pass
 
@@ -575,7 +561,7 @@ def extract_7zfile(old_path, file_n, uncomp_pack, exceed_pack, user, registre):
         log_it("warning",f"Archive extracted successfully but could not be removed: {e}")
 
 """Analyse des formats avec DROID"""
-def droid_check(source_path, reports, user, registre): 
+def droid_check(source_path, reports, user, registry): 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     droid_path = os.path.join(base_dir, "droid", "droid.bat") #subprocess refuse les chemins relatifs
 
@@ -589,12 +575,12 @@ def droid_check(source_path, reports, user, registre):
             f"You can see the report into {reports}")
             event = Event(eventType="identification", eventDateTime=horodatage(), eventOutcome="success") 
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
 
         except subprocess.CalledProcessError as e:
             event = Event(eventType="identification", eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
             log_it("error", f"DROID failed. Details : {e.stderr}, {e.stdout}")
             pass
 
@@ -603,7 +589,7 @@ def droid_check(source_path, reports, user, registre):
         "Please install it and retry")
 
 
-def assign_droid_data(copies_rep, reports, user, registre):
+def assign_droid_data(copies_rep, reports, user, registry):
     """Assigne les métadonnées extraites via DROID aux objets de métadonnées"""
     droid_file_path = os.path.join(reports, "droid_report.csv")
 
@@ -614,7 +600,7 @@ def assign_droid_data(copies_rep, reports, user, registre):
                 file_path = row["FILE_PATH"]
                 rel_path = get_relative_path(file_path, copies_rep)
                 droid_hash = row["HASH"]
-                premis_object = get_premis_object(rel_path, droid_hash, registre)
+                premis_object = get_premis_object(rel_path, droid_hash, registry)
                 if premis_object is not None:
                     premis_object.formatName = row["FORMAT_NAME"]
                     premis_object.size = row["SIZE"]
@@ -633,13 +619,13 @@ def assign_droid_data(copies_rep, reports, user, registre):
                    
                     event.add_linking_object(premis_object, "source")
                     event.add_linking_agent(user)
-                    registre.add_event(event)
+                    registry.add_event(event)
                     premis_object.add_linking_event(event)
 
     else:
         log_it("error", "Zenobie does not find the droid_report.csv file")   
 
-def jhove_validation(source_path, reports, user, registre):
+def jhove_validation(source_path, reports, user, registry):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     jhove_path = os.path.join(base_dir, "jhove", "jhove.bat") #subprocess refuse les chemins relatifs
     if os.path.isfile(jhove_path):
@@ -654,22 +640,22 @@ def jhove_validation(source_path, reports, user, registre):
             f"You can see the report into {reports}")  
             event = Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="success")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
             
 
         except subprocess.CalledProcessError as e:
             event = Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure")
             event.add_linking_agent(user)
-            registre.add_event(event)
+            registry.add_event(event)
             log_it("error", f"JHOVE has failed {e.stderr}, {e.stdout}")
     else :
         event = Event(eventType="validation", eventDateTime=horodatage(), eventOutcome="failure")
         event.add_linking_agent(user)
-        registre.add_event()
+        registry.add_event()
         log_it("error","JHOVE validation has failed because jhove.bat is not present on the Zenobie repository (jhove/jhove.bat). " \
         "Please install it and retry")
 
-def assign_jhove_data(copies_rep, reports, user, registre):
+def assign_jhove_data(copies_rep, reports, user, registry):
     jhove_file_path = os.path.join(reports, "jhove.json")
     if os.path.isfile(jhove_file_path):
         jhove_dict_results = read_json_report("jhove.json", reports)
@@ -685,7 +671,7 @@ def assign_jhove_data(copies_rep, reports, user, registre):
                 ),
                 None
             )
-            premis_object = get_premis_object(rel_path, jhove_hash, registre)
+            premis_object = get_premis_object(rel_path, jhove_hash, registry)
             if premis_object is not None :
                 event = Event(eventType="validation", 
                     eventDateTime=horodatage(), 
@@ -694,14 +680,14 @@ def assign_jhove_data(copies_rep, reports, user, registre):
                     eventOutcomeDetailNote=f"format={item['format']}; version= {item['reportingModule']['release']}; result={item['status']}")
                 event.add_linking_object(premis_object, "outcome")
                 event.add_linking_agent(user)
-                registre.add_event(event)      
+                registry.add_event(event)      
                 premis_object.add_linking_event(event)
       
     else:
         log_it("error", "Zenobie does not find the jhove.json file") 
 
 
-def remove_empty(copies_rep, report_r, user, registre):
+def remove_empty(copies_rep, report_r, user, registry):
     #peut-être penser à inclure un dry run
     log_it("info","Removing empty repositories has started")
     abs_path = os.path.abspath(copies_rep) #abspath retourne le chemin absolu exact de l'objet, utile pour vérifier des paths relatifs
@@ -726,7 +712,7 @@ def remove_empty(copies_rep, report_r, user, registre):
                               eventDetail=f"{root} was empty and has been removed")
                 event.add_linking_agent(user)
 
-                registre.add_event(event)
+                registry.add_event(event)
                 
                 log_it("info",f"Removed: {root}")
 
@@ -739,10 +725,10 @@ def remove_empty(copies_rep, report_r, user, registre):
                           eventDetail=f"{root} was not removed : {e}")
             event.add_linking_agent(user)
 
-            registre.add_event(event)            
+            registry.add_event(event)            
     log_it("info",f"Removing process done. Zenovie has removed {removed} empty repositories")
 
-def remove_forbidden_chars(repository_path, report_r, user, registre):
+def remove_forbidden_chars(repository_path, report_r, user, registry):
     log_it("info", "launch of forbidden chars removing")
     #peut-être penser à mettre un dry run
     for root, _, files in os.walk(repository_path):
@@ -766,7 +752,7 @@ def remove_forbidden_chars(repository_path, report_r, user, registre):
 
             normalized_name = verify_collision(new_path)
             new_name = get_relative_path(normalized_name, repository_path)
-            premis_object = get_premis_object(old_name, sha_256, registre)
+            premis_object = get_premis_object(old_name, sha_256, registry)
             if premis_object is not None:
                 try:
                     os.rename(old_path, normalized_name)
@@ -776,7 +762,7 @@ def remove_forbidden_chars(repository_path, report_r, user, registre):
                                 eventOutcome="Success")
                     event.add_linking_agent(user)
                     event.add_linking_object(premis_object, "result")
-                    registre.add_event(event)
+                    registry.add_event(event)
                     premis_object.add_linking_event(event)
 
                 except OSError as e:
@@ -785,7 +771,7 @@ def remove_forbidden_chars(repository_path, report_r, user, registre):
                                 eventOutcome="failure")
                     event.add_linking_agent(user)
                     event.add_linking_object(premis_object, "result")
-                    registre.add_event(event)
+                    registry.add_event(event)
                     premis_object.add_linking_event(event)
 
                     continue
@@ -795,15 +781,15 @@ def remove_forbidden_chars(repository_path, report_r, user, registre):
                             eventDetail=f"Zenobie failed to rename {old_path} because PREMIS object was not found", 
                             eventOutcome="failure")
                 event.add_linking_agent(user)
-                registre.add_event(event)
+                registry.add_event(event)
                 
-    write_report("rename_report.txt", report_r, type="rename", cible=registre)
+    write_report("rename_report.txt", report_r, type="rename", cible=registry)
     log_it("info", "removing of forbidden chars done")
 
 
 
 
-def robo_copy(source: str, destination: str, log_repository: str, report_name: str, user, registre: PremisObjects) -> dict:
+def robo_copy(source: str, destination: str, log_repository: str, report_name: str, user, registry: PremisObjects) -> dict:
     subprocess.run("chcp 65001", shell=True) #utilisé pour ajouter les caractères spéciaux fr avant le run de robotcopy
     process = subprocess.run(["robocopy", source, destination,
                     "/e", "/copy:DATSO", "/X", "/V", "/FP", f"/log+:{log_repository}/{report_name}", "/TEE"], 
@@ -813,7 +799,7 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
         event = Event(eventType="transfer", eventDateTime=horodatage(), 
         eventDetail= f"Robocopy process finished", eventOutcome="success")
         event.add_linking_agent(user)
-        registre.add_event(event)        
+        registry.add_event(event)        
         
     else:
         log_it("error", f"robocopy has encounter an error \nplease check the {log_repository}/{report_name} to fix it before retry the process")
@@ -832,8 +818,8 @@ def robo_copy(source: str, destination: str, log_repository: str, report_name: s
     paths_destination = get_relative_paths(destination) #utile pour la vérification avec les hashs
     return paths_destination
 
-def finalizing_metadata(report_repository:str, registre:PremisObjects):
-    write_report("events_report.txt", report_repository, type="event", cible=registre)
-    write_report("objects.csv", report_repository, type="objects", cible=registre )
-    write_json_report("objects.json", report_repository, registre.get_objects())
+def finalizing_metadata(report_repository:str, registry:PremisObjects):
+    write_report("events_report.txt", report_repository, type="event", cible=registry)
+    write_report("objects.csv", report_repository, type="objects", cible=registry )
+    write_json_report("objects.json", report_repository, registry.get_objects())
     log_it("info", "writing final objects.json")
