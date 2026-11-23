@@ -255,12 +255,24 @@ def state_of_art(source_path, report_repository, user, registry):
     start_depth = 1
     repositories_number = 0
     files_number = 0
-    full_size = os.path.getsize(str(source_path)) #taille du contenu de la totalité du répertoire en bytes
+    full_size = 0
     date = horodatage() #horodatage du rapport
     state_report = State(source_path, user.agentName, user.note, date=horodatage())
     tree = {}
     all_paths = [] #pour calculer le plus anciens/récents
     all_extensions = []
+
+    """Variables secondaires pour le rapport"""
+    oldest_created_f = None
+    oldest_ct = None
+    most_recent_created_f = None
+    most_rct = None
+
+    oldest_modified_f = None
+    oldest_mt = None
+    most_recent_modified_f = None
+    most_rmt = None
+
     for root, dirs, files in os.walk(source_path):
         current_depth = root.replace(source_path, '').count(os.sep) #compte la profondeur à partir du répertoire actuel moins la racine
         max_depth = str(max(start_depth, current_depth)) #calcule la différence entre le niveau 1 et le compte des profondeurs
@@ -271,6 +283,7 @@ def state_of_art(source_path, report_repository, user, registry):
             "dirs": dirs,
             "files": files
         }
+
         for file in files:
             file_path = os.path.join(root, file)        
             full_size += os.path.getsize(file_path)
@@ -278,19 +291,20 @@ def state_of_art(source_path, report_repository, user, registry):
             if file_extension.lower() not in all_extensions:
                 all_extensions.append(file_extension.lower())
 
-            if os.path.isfile(file):
+            if os.path.isfile(file_path):
                 files_number += 1
+
             all_paths.append(file_path)
 
     if all_paths:
         oldest_created_f = min(all_paths, key= os.path.getctime)
-        oldest_ct = str(datetime.datetime.fromtimestamp(os.path.getctime(oldest_created_f)))
+        oldest_ct = str(datetime.datetime.fromtimestamp(os.path.getctime(oldest_created_f))) #gtctime = date de création d'un fichier sur Windows. Dépend du OS
         most_recent_created_f = max(all_paths, key=os.path.getctime)
         most_rct = str(datetime.datetime.fromtimestamp(os.path.getctime(most_recent_created_f)))
         oldest_modified_f = min(all_paths, key= os.path.getmtime)
-        oldest_mt = str(datetime.datetime.fromtimestamp(os.path.getctime(oldest_modified_f)))
+        oldest_mt = str(datetime.datetime.fromtimestamp(os.path.getmtime(oldest_modified_f)))
         most_recent_modified_f = max(all_paths, key= os.path.getmtime)
-        most_rmt = str(datetime.datetime.fromtimestamp(os.path.getctime(most_recent_modified_f)))
+        most_rmt = str(datetime.datetime.fromtimestamp(os.path.getmtime(most_recent_modified_f)))
 
     state_report.date = date                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
     state_report.full_size=full_size
